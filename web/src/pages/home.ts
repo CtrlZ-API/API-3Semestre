@@ -156,9 +156,52 @@ async function carregarDados(tipo: TipoIndicador, dataInicio?: string, dataFim?:
   }
 }
 
+function lerFiltros(): { tipo: TipoIndicador; dataInicio?: string; dataFim?: string; regiao?: Regiao; } {
+  const tipo      = (document.getElementById("tipo-select") as HTMLSelectElement).value as TipoIndicador;
+  const dataInicio = (document.getElementById("data-inicio") as HTMLInputElement).value || undefined;
+  const dataFim    = (document.getElementById("data-fim")    as HTMLInputElement).value || undefined;
+  const regiao = (document.getElementById("regiao-select") as HTMLSelectElement).value as Regiao || undefined;
+  return { tipo, dataInicio, dataFim, regiao };
+}
+
+
 export async function renderizarHome(container: HTMLElement): Promise<void> {
   container.innerHTML = renderHome();
 
   await carregarDados("saldo");
 
+  const select   = document.getElementById("tipo-select") as HTMLSelectElement;
+  const btnLimpar  = document.getElementById("btn-limpar")  as HTMLButtonElement;
+  const inputInicio = document.getElementById("data-inicio") as HTMLInputElement;
+  const inputFim    = document.getElementById("data-fim")    as HTMLInputElement;
+  const selectRegiao = document.getElementById("regiao-select") as HTMLSelectElement;
+
+  // Ao trocar o indicador, mantém o período atual
+  select.addEventListener("change", () => {
+    const { tipo, dataInicio, dataFim, regiao } = lerFiltros();
+    carregarDados(tipo, dataInicio, dataFim, regiao);
+  });
+
+  selectRegiao.addEventListener("change", () => {
+  const { tipo, dataInicio, dataFim, regiao } = lerFiltros();
+  carregarDados(tipo, dataInicio, dataFim, regiao);
+  });
+
+  inputInicio.addEventListener("change", () => {
+    const { tipo, dataInicio, dataFim, regiao } = lerFiltros();
+    carregarDados(tipo, dataInicio, dataFim, regiao);
+  });
+
+  inputFim.addEventListener("change", () => {
+    const { tipo, dataInicio, dataFim, regiao } = lerFiltros();
+    carregarDados(tipo, dataInicio, dataFim, regiao);
+  });
+
+  // Ao clicar em Limpar, reseta datas e recarrega sem filtro
+  btnLimpar.addEventListener("click", () => {
+    inputInicio.value = "";
+    inputFim.value    = "";
+    selectRegiao.value = "";
+    carregarDados(select.value as TipoIndicador);
+  });
 }
