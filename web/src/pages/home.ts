@@ -107,38 +107,53 @@ function renderRanking(dados: ResumoEstado[], tipo: TipoIndicador): void {
   const container = document.getElementById("ranking")!;
 
   const dadosOrdenados = [...dados].sort((a, b) => b.media - a.media);
-
   const limite = rankingExpandido ? dadosOrdenados.length : 10;
+  
+  const valorMaximo = Math.max(...dadosOrdenados.map(d => Math.abs(d.media)));
 
   container.innerHTML = `
-    <ol style="list-style: none; padding: 0;">
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
       ${dadosOrdenados
         .slice(0, limite)
         .map(
-          (d, i) => `
-          <li style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.6rem 0;
-            border-bottom: 1px solid #eee;
-          ">
-            <span>
-              <strong style="color: #888; margin-right: 0.5rem;">${i + 1}.</strong>
-              ${d.estado}
-              <span style="color: #aaa; font-size: 0.85rem;"> (${d.regiao})</span>
-            </span>
-            <span style="font-weight: bold;">${formatarValor(d.media, tipo)}</span>
-          </li>
-        `
+          (d, i) => {
+            const valor = d.media;
+            const percentual = (Math.abs(valor) / valorMaximo) * 100;
+            const corBarra = valor >= 0 ? "#9ae1b6" : "#c26d67";
+            
+            return `
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <span style="min-width: 180px;">
+                  <strong style="color: #888; margin-right: 0.5rem;">${i + 1}.</strong>
+                  ${d.estado}
+                  <span style="color: #aaa; font-size: 0.85rem;"> (${d.regiao})</span>
+                </span>
+                <div style="flex: 1; background: #e0e0e0; border-radius: 4px; height: 28px; overflow: hidden;">
+                  <div style="
+                    width: ${percentual}%;
+                    background: ${corBarra};
+                    height: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: flex-end;
+                    padding-right: 8px;
+                    color: white;
+                    font-size: 0.75rem;
+                    font-weight: bold;
+                  "></div>
+                </div>
+                <span style="min-width: 100px; text-align: right; font-weight: bold;">${formatarValor(valor, tipo)}</span>
+              </div>
+            `;
+          }
         )
         .join("")}
-    </ol>
+    </div>
 
     ${
       dadosOrdenados.length > 10
         ? `
-        <div style="text-align: center; margin-top: 1rem;">
+        <div style="text-align: center; margin-top: 1.5rem;">
           <button id="btn-toggle-ranking" style="
             padding: 0.4rem 0.8rem;
             background: transparent;
@@ -162,8 +177,6 @@ function renderRanking(dados: ResumoEstado[], tipo: TipoIndicador): void {
     });
   }
 }
-
-
 
 function card(titulo: string, valor: string, bg: string): string {
   return `
