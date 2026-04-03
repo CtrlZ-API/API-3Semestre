@@ -96,9 +96,9 @@ function renderCards(dados: ResumoEstado[], tipo: TipoIndicador): void {
     const labelMenor = tipo === "variacao" ? "Menor crescimento" : "Menor estado";
 
     container.innerHTML = `
-      ${card(labelPrincipal, formatarValor(valorPrincipal, tipo),                                 "#cae9ff")}
+      ${card(labelPrincipal, formatarValor(valorPrincipal, tipo),                                 "#f8dd73")}
       ${card(labelMaior,     `${maiorEstado.estado} — ${formatarValor(maiorEstado.media, tipo)}`, "#f89997")}
-      ${card(labelMenor,     `${menorEstado.estado} — ${formatarValor(menorEstado.media, tipo)}`, "#cbeef3")}
+      ${card(labelMenor,     `${menorEstado.estado} — ${formatarValor(menorEstado.media, tipo)}`, "#6ae098")}
     `;
   }
 }
