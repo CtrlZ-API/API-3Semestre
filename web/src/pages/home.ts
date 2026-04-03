@@ -66,6 +66,42 @@ function renderHome(): string {
 
 let rankingExpandido = false;
 
+function renderCards(dados: ResumoEstado[], tipo: TipoIndicador): void {
+  const mediaNacional = dados.reduce((acc, d) => acc + d.media, 0) / dados.length;
+
+  const valorPrincipal = tipo === "saldo"
+    ? dados.reduce((acc, d) => acc + d.total, 0)
+    : mediaNacional;
+
+  const labelPrincipal = tipo === "saldo"
+    ? "Total nacional"
+    : tipo === "variacao"
+      ? "Crescimento médio mensal"
+      : "Média nacional";
+
+  const container = document.getElementById("cards")!;
+
+  if (tipo === "saldo") {
+    const maiorSaldo = [...dados].sort((a, b) => b.media - a.media)[0];
+    container.innerHTML = `
+      ${card(labelPrincipal,     formatarValor(valorPrincipal, tipo),                               "#f8dd73")}
+      ${card("Média por estado", formatarValor(mediaNacional, tipo),                              "#f89997")}
+      ${card("Maior estado",     `${maiorSaldo.estado} — ${formatarValor(maiorSaldo.media, tipo)}`, "#6ae098")}
+    `;
+  } else {
+    const dadosOrdenados = [...dados].sort((a, b) => b.media - a.media);
+    const maiorEstado    = dadosOrdenados[0];
+    const menorEstado    = dadosOrdenados[dadosOrdenados.length - 1];
+    const labelMaior = tipo === "variacao" ? "Maior crescimento" : "Maior estado";
+    const labelMenor = tipo === "variacao" ? "Menor crescimento" : "Menor estado";
+
+    container.innerHTML = `
+      ${card(labelPrincipal, formatarValor(valorPrincipal, tipo),                                 "#cae9ff")}
+      ${card(labelMaior,     `${maiorEstado.estado} — ${formatarValor(maiorEstado.media, tipo)}`, "#f89997")}
+      ${card(labelMenor,     `${menorEstado.estado} — ${formatarValor(menorEstado.media, tipo)}`, "#cbeef3")}
+    `;
+  }
+}
 
 function renderRanking(dados: ResumoEstado[], tipo: TipoIndicador): void {
   const container = document.getElementById("ranking")!;
@@ -129,6 +165,19 @@ function renderRanking(dados: ResumoEstado[], tipo: TipoIndicador): void {
 
 
 
+function card(titulo: string, valor: string, bg: string): string {
+  return `
+    <div style="
+      background: ${bg};
+      border-radius: 8px;
+      padding: 1.25rem;
+      border: 1px solid #e0e0e0;
+    ">
+      <p style="font-size: 0.8rem; margin-bottom: 0.4rem;">${titulo}</p>
+      <p style="font-size: 1.1rem; font-weight: bold;">${valor}</p>
+    </div>
+  `;
+}
 
 function formatarValor(valor: number, tipo: TipoIndicador): string {
   if (tipo === "saldo") {
@@ -143,12 +192,15 @@ function formatarValor(valor: number, tipo: TipoIndicador): string {
 
 
 async function carregarDados(tipo: TipoIndicador, dataInicio?: string, dataFim?: string, regiao?: Regiao): Promise<void> {
+  const cards   = document.getElementById("cards")!;
   const ranking = document.getElementById("ranking")!;
+  cards.innerHTML   = `<p class="loading">Carregando...</p>`;
   ranking.innerHTML = `<p class="loading">Carregando...</p>`;
   rankingExpandido = false;
 
   try {
     const dados = await getDadosPorEstadosPeriodo(tipo, dataInicio, dataFim, regiao);
+    renderCards(dados, tipo);
     renderRanking(dados, tipo);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro desconhecido";
@@ -164,7 +216,6 @@ function lerFiltros(): { tipo: TipoIndicador; dataInicio?: string; dataFim?: str
   return { tipo, dataInicio, dataFim, regiao };
 }
 
-
 export async function renderizarHome(container: HTMLElement): Promise<void> {
   container.innerHTML = renderHome();
 
@@ -176,7 +227,6 @@ export async function renderizarHome(container: HTMLElement): Promise<void> {
   const inputFim    = document.getElementById("data-fim")    as HTMLInputElement;
   const selectRegiao = document.getElementById("regiao-select") as HTMLSelectElement;
 
-  // Ao trocar o indicador, mantém o período atual
   select.addEventListener("change", () => {
     const { tipo, dataInicio, dataFim, regiao } = lerFiltros();
     carregarDados(tipo, dataInicio, dataFim, regiao);
@@ -197,7 +247,6 @@ export async function renderizarHome(container: HTMLElement): Promise<void> {
     carregarDados(tipo, dataInicio, dataFim, regiao);
   });
 
-  // Ao clicar em Limpar, reseta datas e recarrega sem filtro
   btnLimpar.addEventListener("click", () => {
     inputInicio.value = "";
     inputFim.value    = "";
