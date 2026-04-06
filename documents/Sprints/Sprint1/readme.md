@@ -5,6 +5,7 @@ Sprint concluída ✅
 ## Base do Sistema Funcionando:
 
 
+https://github.com/user-attachments/assets/e4ee63ae-eba1-4e8a-954c-3be0fa3492b8
 
 
 ## Backlog da Sprint 📝
