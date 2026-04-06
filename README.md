@@ -7,7 +7,6 @@
 <br>
   <p align="center">
   |    
-    <a href=""> Manual de Instalação </a> |
     <a href="#sobre-o-projeto"> Sobre o Projeto </a> |
     <a href="#-metodologia"> Metodologia </a> |
     <a href="#backlog-do-produto"> Backlog do Produto </a> |
@@ -62,7 +61,7 @@
     <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white&style=for-the-badge"></a>
     <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white&style=for-the-badge"></a>
     <a href="https://www.python.org"><img src="https://img.shields.io/badge/Python-FFD43B?logo=python&logoColor=black&style=for-the-badge"></a>
-    <a href="www.figma.com"><img src="https://img.shields.io/badge/Figma-F24E1E?logo=figma&logoColor=white&style=for-the-badge"></a>
+    <a href="https://www.figma.com"><img src="https://img.shields.io/badge/Figma-F24E1E?logo=figma&logoColor=white&style=for-the-badge"></a>
     <a href="https://www.clickup.com"><img src="https://img.shields.io/badge/ClickUp-7B68EE?logo=clickup&logoColor=white&style=for-the-badge"></a>
     <a href="https://github.com"><img src="https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white&style=for-the-badge"></a>
     <a href="https://www.canva.com"><img src="https://img.shields.io/badge/Canva-00C4CC?logo=canva&logoColor=white&style=for-the-badge"></a>
