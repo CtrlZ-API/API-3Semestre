@@ -68,7 +68,20 @@ def get_por_estados(tipo: str = Query(default="saldo")):
     if not rows:
         raise HTTPException(status_code=404, detail=f"Tipo '{tipo}' não encontrado.")
 
-    return [dict(r) for r in rows]
+    resultado = []
+
+    for i in rows:
+        d = dict(i)
+    
+        score = d["media"]
+        categoria, insight = definir_score(score)
+
+        d["categoria"] = categoria
+        d["insight"] = insight
+
+        resultado.append(d)
+
+    return resultado
 
 
 
@@ -205,6 +218,7 @@ def get_por_periodo(
 
     return [dict(r) for r in rows]
 
+<<<<<<< Updated upstream
 @app.get("/api/oportunidade/ranking")
 def get_ranking_oportunidade(
     # Query Params permitem que o Front-end envie pesos diferentes sem mudar o código.
@@ -286,3 +300,12 @@ def get_ranking_oportunidade(
 
     # Ordenamos a lista do maior score para o menor antes de enviar para a API.
     return sorted(ranking, key=lambda x: x["score_oportunidade"], reverse=True)
+=======
+def definir_score (score):
+    if score <= 40:
+        return ("Risco Alto",  "Alta inadimplência" )
+    elif score <= 70:
+        return ("Moderado", "Inadimplência moderada")
+    else:
+        return ("Alta Oportunidade", "Baixa inadimplência")
+>>>>>>> Stashed changes
