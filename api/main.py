@@ -66,7 +66,7 @@ def get_por_estados(tipo: str = Query(default="saldo")):
     conn.close()
 
     if not rows:
-        raise HTTPException(status_code=404, detail=f"Tipo '{tipo}' não encontrado.")
+        return []
 
     resultado = []
 
@@ -114,10 +114,10 @@ def get_por_estados_periodo(
 
     if data_inicio:
         query += " AND data >= ?"
-        params.append(data_inicio)
+        params.append(f"{data_inicio} 00:00:00")
     if data_fim:
         query += " AND data <= ?"
-        params.append(data_fim)
+        params.append(f"{data_fim} 23:59:59")
     if regiao:
         query += " AND regiao = ?"
         params.append(regiao)
@@ -129,7 +129,7 @@ def get_por_estados_periodo(
     conn.close()
 
     if not rows:
-        raise HTTPException(status_code=404, detail=f"Tipo '{tipo}' não encontrado.")
+        return []
 
     return [dict(r) for r in rows]
 
@@ -149,7 +149,7 @@ def get_por_tipo(tipo: str):
     conn.close()
 
     if not rows:
-        raise HTTPException(status_code=404, detail=f"Tipo '{tipo}' não encontrado.")
+        return []
 
     return [dict(r) for r in rows]
 
@@ -175,10 +175,7 @@ def get_por_estado(uf: str, tipo: str = Query(default="saldo")):
     conn.close()
 
     if not rows:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Estado '{uf.upper()}' ou tipo '{tipo}' não encontrado.",
-        )
+        return []
 
     return [dict(r) for r in rows]
 
@@ -218,6 +215,50 @@ def get_por_periodo(
 
     return [dict(r) for r in rows]
 
+@app.get("/api/dados/historico")
+def get_historico_geral(
+    regiao:      str = Query(default=None),
+    data_inicio: str = Query(default=None),
+    data_fim:    str = Query(default=None)
+):
+    """
+    Retorna a série histórica agregada (nacional ou por região) para os 3 indicadores.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # CASE WHEN com NULL garante que o AVG ignore os registros que não são do tipo 'inadimplencia'
+    query_base = """
+        SELECT 
+            data,
+            ROUND(SUM(CASE WHEN tipo = 'saldo' THEN valor ELSE 0 END), 2) as saldo,
+            ROUND(AVG(CASE WHEN tipo = 'inadimplencia' THEN valor ELSE NULL END), 2) as inadimplencia,
+            ROUND(SUM(CASE WHEN tipo = 'variacao' THEN valor ELSE 0 END), 2) as variacao
+        FROM dados_credito
+        WHERE 1=1
+    """
+    params = []
+    
+    if regiao:
+        query_base += " AND regiao = ?"
+        params.append(regiao)
+    if data_inicio:
+        # Garante comparação inclusiva com o início do dia
+        query_base += " AND data >= ?"
+        params.append(f"{data_inicio} 00:00:00")
+    if data_fim:
+        # Garante comparação inclusiva com o fim do dia (evita o problema da string mais longa)
+        query_base += " AND data <= ?"
+        params.append(f"{data_fim} 23:59:59")
+        
+    query_base += " GROUP BY data ORDER BY data ASC"
+    
+    cursor.execute(query_base, params)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return [dict(r) for r in rows]
+
 @app.get("/api/oportunidade/ranking")
 def get_ranking_oportunidade(
     # Query Params permitem que o Front-end envie pesos diferentes sem mudar o código.
@@ -255,7 +296,7 @@ def get_ranking_oportunidade(
         conn.close()
 
     if not rows:
-        raise HTTPException(status_code=404, detail="Não há dados disponíveis para o cálculo.")
+        return []
 
     dados = [dict(r) for r in rows]
 
