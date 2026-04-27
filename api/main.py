@@ -223,19 +223,17 @@ def get_ranking_oportunidade(
     # Query Params permitem que o Front-end envie pesos diferentes sem mudar o código.
     # Exemplo: /ranking?w_inad=-0.8 (dando mais peso negativo ao risco)
     w_saldo: float = Query(0.3, description="Peso Saldo (Quanto maior o volume, melhor)"),
-    w_inad: float = Query(-0.3, description="Peso Inadimplência (Quanto maior o risco, pior)"),
+    w_inad: float = Query(0.3, description="Peso Saúde de Crédito (Inverso da inadimplência)"),
     w_var: float = Query(0.4, description="Peso Variação (Potencial de crescimento)")
 ):
     """
     Calcula um Score de Oportunidade (0-100) para cada estado.
-    Utiliza Normalização Min-Max para comparar indicadores de grandezas diferentes.
+    Utiliza Normalização Min-Max real para comparar indicadores de grandezas diferentes.
     """
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Usamos uma subquery (SELECT MAX(data)...) para garantir que o ranking 
-    # use sempre a foto mais recente do mercado para todos os estados.
-    # O CASE WHEN: transforma linhas de tipos diferentes em colunas.
+    # Buscamos os dados mais recentes
     query = """
         SELECT 
             estado,
@@ -259,30 +257,37 @@ def get_ranking_oportunidade(
     if not rows:
         raise HTTPException(status_code=404, detail="Não há dados disponíveis para o cálculo.")
 
-    # Convertendo os objetos Row do SQLite em dicionários Python para manipulação facilitada.
     dados = [dict(r) for r in rows]
 
-    # Como saldo é em 'milhões' e inadimplência é 'porcentagem', não podemos somá-los diretamente.
-    # Encontramos o valor máximo de cada coluna para colocar tudo na mesma escala (0 a 1).
-    # O "or 1" evita o erro fatal de divisão por zero caso o banco esteja zerado.
-    max_s = max((d["v_saldo"] for d in dados), default=1) or 1
-    max_i = max((d["v_inad"] for d in dados), default=1) or 1
-    max_v = max((d["v_var"] for d in dados), default=1) or 1
+    # Para uma normalização Min-Max justa, precisamos dos mínimos e máximos de cada indicador
+    def get_min_max(key):
+        vals = [d[key] for d in dados]
+        return min(vals), max(vals)
+
+    min_s, max_s = get_min_max("v_saldo")
+    min_i, max_i = get_min_max("v_inad")
+    min_v, max_v = get_min_max("v_var")
 
     ranking = []
 
     for d in dados:
-        # Transforma o valor bruto em um percentual do valor máximo (0.0 a 1.0)
-        n_saldo = d["v_saldo"] / max_s
-        n_inad  = d["v_inad"] / max_i
-        n_var   = d["v_var"] / max_v
+        # Normalização Min-Max (0.0 a 1.0)
+        # O "or 1" no divisor evita divisão por zero se todos os valores forem iguais
+        n_saldo = (d["v_saldo"] - min_s) / ((max_s - min_s) or 1)
+        n_inad  = (d["v_inad"] - min_i) / ((max_i - min_i) or 1)
+        n_var   = (d["v_var"] - min_v) / ((max_v - min_v) or 1)
 
-        # Multiplica cada valor normalizado pelo seu peso correspondente.
-        # Se o peso da inadimplência for negativo, ele reduz o score final.
-        score_bruto = (n_saldo * w_saldo) + (n_inad * w_inad) + (n_var * w_var)
+        # Inversão da Inadimplência: 
+        # Como queremos um score de OPORTUNIDADE, quanto MENOR a inadimplência, MELHOR.
+        # n_inad = 1 significa a pior inadimplência do grupo. 
+        # (1 - n_inad) transforma isso em 0 (pior saúde).
+        saude_credito = 1 - n_inad
+
+        # Cálculo do Score Final
+        # Somamos as contribuições positivas. Se os pesos somarem 1.0, o resultado estará entre 0 e 1.
+        score_bruto = (n_saldo * w_saldo) + (saude_credito * w_inad) + (n_var * w_var)
         
-        # Multiplicamos por 100 para virar uma nota de 0 a 100.
-        # O max(0, min(100...)) garante que o resultado nunca saia desse intervalo.
+        # Escala de 0 a 100
         score_final = round(max(0.0, min(100.0, score_bruto * 100)), 2)
 
         # Montamos a estrutura de resposta que o Front-end espera.
