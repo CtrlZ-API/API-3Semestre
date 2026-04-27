@@ -2,3 +2,6 @@ __pycache__/
 web/node_modules/
 .vscode/
 venv/
+venv-test/
+scratch/
+node_modules/
