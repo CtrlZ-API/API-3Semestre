@@ -1,5 +1,6 @@
-import { getDadosPorEstadosPeriodo } from "../api/client";
+import { getDadosPorEstadosPeriodo, getHistoricoGeral } from "../api/client";
 import type { Regiao, ResumoEstado, TipoIndicador } from "../types";
+import { HistoricoChart } from "../components/HistoricoChart";
 
 
 function renderHome(): string {
@@ -53,6 +54,13 @@ function renderHome(): string {
       margin-bottom: 2rem;
     ">
       <p class="loading">Carregando cards...</p>
+    </section>
+
+    <section style="background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem;">
+      <h2 style="font-size: 1.1rem; margin-bottom: 1.5rem;">Evolução Histórica Multi-indicador</h2>
+      <div id="historico-chart" style="min-height: 400px; position: relative;">
+        <p class="loading">Carregando gráfico...</p>
+      </div>
     </section>
 
     <section style="background: #fff; border-radius: 8px; padding: 1.5rem;">
@@ -204,20 +212,49 @@ function formatarValor(valor: number, tipo: TipoIndicador): string {
 }
 
 
+
+let historicoChart: HistoricoChart | null = null;
+
 async function carregarDados(tipo: TipoIndicador, dataInicio?: string, dataFim?: string, regiao?: Regiao): Promise<void> {
   const cards   = document.getElementById("cards")!;
   const ranking = document.getElementById("ranking")!;
+  const chartContainer = document.getElementById("historico-chart")!;
+  
   cards.innerHTML   = `<p class="loading">Carregando...</p>`;
   ranking.innerHTML = `<p class="loading">Carregando...</p>`;
+  // Não limpamos o chartContainer para evitar saltos, o D3 cuida do update ou mostramos loading se for a primeira vez
+  
   rankingExpandido = false;
 
   try {
-    const dados = await getDadosPorEstadosPeriodo(tipo, dataInicio, dataFim, regiao);
-    renderCards(dados, tipo);
-    renderRanking(dados, tipo);
+    // Carregar dados paralelos
+    const [dadosEstados, dadosHistorico] = await Promise.all([
+      getDadosPorEstadosPeriodo(tipo, dataInicio, dataFim, regiao),
+      getHistoricoGeral(regiao, dataInicio, dataFim)
+    ]);
+
+    if (dadosEstados.length === 0) {
+      cards.innerHTML = `<p class="error" style="color: #666;">Nenhum dado encontrado para o período selecionado.</p>`;
+      ranking.innerHTML = `<p class="error" style="color: #666;">Nenhum dado encontrado para o período selecionado.</p>`;
+    } else {
+      renderCards(dadosEstados, tipo);
+      renderRanking(dadosEstados, tipo);
+    }
+    
+    if (!historicoChart) {
+      chartContainer.innerHTML = "";
+      historicoChart = new HistoricoChart({ containerId: "historico-chart" });
+    }
+    historicoChart.render(dadosHistorico);
+
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro desconhecido";
     cards.innerHTML = `<p class="error">${msg}</p>`;
+    chartContainer.innerHTML = `<p class="error">Erro ao carregar gráfico: ${msg}</p>`;
+    if (historicoChart) {
+      historicoChart.destroy();
+      historicoChart = null;
+    }
   }
 }
 
