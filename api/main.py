@@ -218,7 +218,6 @@ def get_por_periodo(
 
     return [dict(r) for r in rows]
 
-<<<<<<< Updated upstream
 @app.get("/api/oportunidade/ranking")
 def get_ranking_oportunidade(
     # Query Params permitem que o Front-end envie pesos diferentes sem mudar o código.
@@ -300,7 +299,7 @@ def get_ranking_oportunidade(
 
     # Ordenamos a lista do maior score para o menor antes de enviar para a API.
     return sorted(ranking, key=lambda x: x["score_oportunidade"], reverse=True)
-=======
+
 def definir_score (score):
     if score <= 40:
         return ("Risco Alto",  "Alta inadimplência" )
@@ -308,4 +307,3 @@ def definir_score (score):
         return ("Moderado", "Inadimplência moderada")
     else:
         return ("Alta Oportunidade", "Baixa inadimplência")
->>>>>>> Stashed changes
