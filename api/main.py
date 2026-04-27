@@ -68,7 +68,20 @@ def get_por_estados(tipo: str = Query(default="saldo")):
     if not rows:
         raise HTTPException(status_code=404, detail=f"Tipo '{tipo}' não encontrado.")
 
-    return [dict(r) for r in rows]
+    resultado = []
+
+    for i in rows:
+        d = dict(i)
+    
+        score = d["media"]
+        categoria, insight = definir_score(score)
+
+        d["categoria"] = categoria
+        d["insight"] = insight
+
+        resultado.append(d)
+
+    return resultado
 
 
 
@@ -204,3 +217,93 @@ def get_por_periodo(
     conn.close()
 
     return [dict(r) for r in rows]
+
+@app.get("/api/oportunidade/ranking")
+def get_ranking_oportunidade(
+    # Query Params permitem que o Front-end envie pesos diferentes sem mudar o código.
+    # Exemplo: /ranking?w_inad=-0.8 (dando mais peso negativo ao risco)
+    w_saldo: float = Query(0.3, description="Peso Saldo (Quanto maior o volume, melhor)"),
+    w_inad: float = Query(-0.3, description="Peso Inadimplência (Quanto maior o risco, pior)"),
+    w_var: float = Query(0.4, description="Peso Variação (Potencial de crescimento)")
+):
+    """
+    Calcula um Score de Oportunidade (0-100) para cada estado.
+    Utiliza Normalização Min-Max para comparar indicadores de grandezas diferentes.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Usamos uma subquery (SELECT MAX(data)...) para garantir que o ranking 
+    # use sempre a foto mais recente do mercado para todos os estados.
+    # O CASE WHEN: transforma linhas de tipos diferentes em colunas.
+    query = """
+        SELECT 
+            estado,
+            regiao,
+            MAX(CASE WHEN tipo = 'saldo' THEN valor ELSE 0 END) as v_saldo,
+            MAX(CASE WHEN tipo = 'inadimplencia' THEN valor ELSE 0 END) as v_inad,
+            MAX(CASE WHEN tipo = 'variacao' THEN valor ELSE 0 END) as v_var
+        FROM dados_credito
+        WHERE data = (SELECT MAX(data) FROM dados_credito)
+        GROUP BY estado, regiao
+    """
+    
+    try:
+        cursor.execute(query)
+        rows = cursor.fetchall()
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Erro interno no banco: {str(e)}")
+    finally:
+        conn.close()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="Não há dados disponíveis para o cálculo.")
+
+    # Convertendo os objetos Row do SQLite em dicionários Python para manipulação facilitada.
+    dados = [dict(r) for r in rows]
+
+    # Como saldo é em 'milhões' e inadimplência é 'porcentagem', não podemos somá-los diretamente.
+    # Encontramos o valor máximo de cada coluna para colocar tudo na mesma escala (0 a 1).
+    # O "or 1" evita o erro fatal de divisão por zero caso o banco esteja zerado.
+    max_s = max((d["v_saldo"] for d in dados), default=1) or 1
+    max_i = max((d["v_inad"] for d in dados), default=1) or 1
+    max_v = max((d["v_var"] for d in dados), default=1) or 1
+
+    ranking = []
+
+    for d in dados:
+        # Transforma o valor bruto em um percentual do valor máximo (0.0 a 1.0)
+        n_saldo = d["v_saldo"] / max_s
+        n_inad  = d["v_inad"] / max_i
+        n_var   = d["v_var"] / max_v
+
+        # Multiplica cada valor normalizado pelo seu peso correspondente.
+        # Se o peso da inadimplência for negativo, ele reduz o score final.
+        score_bruto = (n_saldo * w_saldo) + (n_inad * w_inad) + (n_var * w_var)
+        
+        # Multiplicamos por 100 para virar uma nota de 0 a 100.
+        # O max(0, min(100...)) garante que o resultado nunca saia desse intervalo.
+        score_final = round(max(0.0, min(100.0, score_bruto * 100)), 2)
+
+        # Montamos a estrutura de resposta que o Front-end espera.
+        ranking.append({
+            "estado": d["estado"],
+            "regiao": d["regiao"],
+            "score_oportunidade": score_final,
+            "indicadores": {
+                "saldo_bruto": d["v_saldo"],
+                "inadimplencia_bruto": d["v_inad"],
+                "variacao_bruta": d["v_var"]
+            }
+        })
+
+    # Ordenamos a lista do maior score para o menor antes de enviar para a API.
+    return sorted(ranking, key=lambda x: x["score_oportunidade"], reverse=True)
+
+def definir_score (score):
+    if score <= 40:
+        return ("Risco Alto",  "Alta inadimplência" )
+    elif score <= 70:
+        return ("Moderado", "Inadimplência moderada")
+    else:
+        return ("Alta Oportunidade", "Baixa inadimplência")
