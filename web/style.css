@@ -271,3 +271,58 @@ button {
 .categoria-badge.alta-oportunidade {
   background: #6ae098;
 }
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1rem;
+  background: #fafafa;
+  border: 2px dashed #e0e0e0;
+  border-radius: 12px;
+  grid-column: 1 / -1;
+}
+
+.empty-state svg {
+  width: 64px;
+  height: 64px;
+  color: #ccc;
+  margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+  font-size: 1.25rem;
+  color: #444;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  color: #888;
+  max-width: 400px;
+  font-size: 0.9rem;
+}
+
+/* Interatividade da Tabela */
+.tabela-ranking tbody tr {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tabela-ranking tbody tr:hover {
+  background: #f0f3ff;
+  transform: translateX(4px);
+}
+
+.tabela-ranking tbody tr.selected {
+  background: #e6e9ff;
+  border-left: 4px solid #2B3EE6;
+}
+
+.tabela-ranking tbody tr.selected td {
+  color: #2B3EE6;
+  font-weight: 500;
+}
+

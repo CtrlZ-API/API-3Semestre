@@ -51,12 +51,14 @@ export function getSerieEstado(
 export function getHistoricoGeral(
   regiao?: string,
   dataInicio?: string,
-  dataFim?: string
+  dataFim?: string,
+  estado?: string
 ): Promise<RegistroHistorico[]> {
   const params = new URLSearchParams();
   if (regiao) params.append("regiao", regiao);
   if (dataInicio) params.append("data_inicio", dataInicio);
   if (dataFim) params.append("data_fim", dataFim);
+  if (estado) params.append("estado", estado);
   return fetchJson(`${BASE_URL}/dados/historico?${params.toString()}`);
 }
 
