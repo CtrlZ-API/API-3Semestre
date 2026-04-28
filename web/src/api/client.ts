@@ -1,4 +1,4 @@
-import type { Regiao, RegistroCredito, ResumoEstado, SerieHistorica, TipoIndicador } from "../types";
+import type { Regiao, RegistroCredito, RegistroHistorico, ResumoEstado, SerieHistorica, TipoIndicador } from "../types";
 
 const BASE_URL = "/api";
 
@@ -46,6 +46,20 @@ export function getSerieEstado(
   tipo: TipoIndicador = "saldo"
 ): Promise<SerieHistorica[]> {
   return fetchJson(`${BASE_URL}/dados/estado/${uf}?tipo=${tipo}`);
+}
+
+export function getHistoricoGeral(
+  regiao?: string,
+  dataInicio?: string,
+  dataFim?: string,
+  estado?: string
+): Promise<RegistroHistorico[]> {
+  const params = new URLSearchParams();
+  if (regiao) params.append("regiao", regiao);
+  if (dataInicio) params.append("data_inicio", dataInicio);
+  if (dataFim) params.append("data_fim", dataFim);
+  if (estado) params.append("estado", estado);
+  return fetchJson(`${BASE_URL}/dados/historico?${params.toString()}`);
 }
 
 // Datas no formato "YYYY-MM-DD".

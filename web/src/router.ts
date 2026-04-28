@@ -1,4 +1,6 @@
+// rota certa 
 import { renderizarHome } from "./pages/home";
+import { renderizarAnalises } from "./pages/analise";
 
 type HandlerFn = (container: HTMLElement, params: Record<string, string>) => Promise<void>;
 
@@ -14,6 +16,13 @@ const rotas: Rota[] = [
     paramNames: [],
     handler: async (container) => {
       await renderizarHome(container);
+    },
+  },
+  {
+    pattern: /^\/analises$/,
+    paramNames: [],
+    handler: async (container) => {
+      await renderizarAnalises(container);
     },
   },
   {

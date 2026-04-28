@@ -55,6 +55,8 @@ function renderHome(): string {
       <p class="loading">Carregando cards...</p>
     </section>
 
+
+
     <section style="background: #fff; border-radius: 8px; padding: 1.5rem;">
       <h2 style="font-size: 1.1rem; margin-bottom: 1rem;">Ranking dos estados</h2>
       <div id="ranking">
@@ -96,9 +98,9 @@ function renderCards(dados: ResumoEstado[], tipo: TipoIndicador): void {
     const labelMenor = tipo === "variacao" ? "Menor crescimento" : "Menor estado";
 
     container.innerHTML = `
-      ${card(labelPrincipal, formatarValor(valorPrincipal, tipo),                                 "#cae9ff")}
+      ${card(labelPrincipal, formatarValor(valorPrincipal, tipo),                                 "#f8dd73")}
       ${card(labelMaior,     `${maiorEstado.estado} — ${formatarValor(maiorEstado.media, tipo)}`, "#f89997")}
-      ${card(labelMenor,     `${menorEstado.estado} — ${formatarValor(menorEstado.media, tipo)}`, "#cbeef3")}
+      ${card(labelMenor,     `${menorEstado.estado} — ${formatarValor(menorEstado.media, tipo)}`, "#6ae098")}
     `;
   }
 }
@@ -107,38 +109,53 @@ function renderRanking(dados: ResumoEstado[], tipo: TipoIndicador): void {
   const container = document.getElementById("ranking")!;
 
   const dadosOrdenados = [...dados].sort((a, b) => b.media - a.media);
-
   const limite = rankingExpandido ? dadosOrdenados.length : 10;
+  
+  const valorMaximo = Math.max(...dadosOrdenados.map(d => Math.abs(d.media)));
 
   container.innerHTML = `
-    <ol style="list-style: none; padding: 0;">
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
       ${dadosOrdenados
         .slice(0, limite)
         .map(
-          (d, i) => `
-          <li style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.6rem 0;
-            border-bottom: 1px solid #eee;
-          ">
-            <span>
-              <strong style="color: #888; margin-right: 0.5rem;">${i + 1}.</strong>
-              ${d.estado}
-              <span style="color: #aaa; font-size: 0.85rem;"> (${d.regiao})</span>
-            </span>
-            <span style="font-weight: bold;">${formatarValor(d.media, tipo)}</span>
-          </li>
-        `
+          (d, i) => {
+            const valor = d.media;
+            const percentual = (Math.abs(valor) / valorMaximo) * 100;
+            const corBarra = valor >= 0 ? "#9ae1b6" : "#c26d67";
+            
+            return `
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <span style="min-width: 180px;">
+                  <strong style="color: #888; margin-right: 0.5rem;">${i + 1}.</strong>
+                  ${d.estado}
+                  <span style="color: #aaa; font-size: 0.85rem;"> (${d.regiao})</span>
+                </span>
+                <div style="flex: 1; background: #e0e0e0; border-radius: 4px; height: 28px; overflow: hidden;">
+                  <div style="
+                    width: ${percentual}%;
+                    background: ${corBarra};
+                    height: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: flex-end;
+                    padding-right: 8px;
+                    color: white;
+                    font-size: 0.75rem;
+                    font-weight: bold;
+                  "></div>
+                </div>
+                <span style="min-width: 100px; text-align: right; font-weight: bold;">${formatarValor(valor, tipo)}</span>
+              </div>
+            `;
+          }
         )
         .join("")}
-    </ol>
+    </div>
 
     ${
       dadosOrdenados.length > 10
         ? `
-        <div style="text-align: center; margin-top: 1rem;">
+        <div style="text-align: center; margin-top: 1.5rem;">
           <button id="btn-toggle-ranking" style="
             padding: 0.4rem 0.8rem;
             background: transparent;
@@ -162,8 +179,6 @@ function renderRanking(dados: ResumoEstado[], tipo: TipoIndicador): void {
     });
   }
 }
-
-
 
 function card(titulo: string, valor: string, bg: string): string {
   return `
@@ -191,17 +206,27 @@ function formatarValor(valor: number, tipo: TipoIndicador): string {
 }
 
 
+
 async function carregarDados(tipo: TipoIndicador, dataInicio?: string, dataFim?: string, regiao?: Regiao): Promise<void> {
   const cards   = document.getElementById("cards")!;
   const ranking = document.getElementById("ranking")!;
+  
   cards.innerHTML   = `<p class="loading">Carregando...</p>`;
   ranking.innerHTML = `<p class="loading">Carregando...</p>`;
+  
   rankingExpandido = false;
 
   try {
-    const dados = await getDadosPorEstadosPeriodo(tipo, dataInicio, dataFim, regiao);
-    renderCards(dados, tipo);
-    renderRanking(dados, tipo);
+    const dadosEstados = await getDadosPorEstadosPeriodo(tipo, dataInicio, dataFim, regiao);
+
+    if (dadosEstados.length === 0) {
+      cards.innerHTML = `<p class="error" style="color: #666;">Nenhum dado encontrado para o período selecionado.</p>`;
+      ranking.innerHTML = `<p class="error" style="color: #666;">Nenhum dado encontrado para o período selecionado.</p>`;
+    } else {
+      renderCards(dadosEstados, tipo);
+      renderRanking(dadosEstados, tipo);
+    }
+
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro desconhecido";
     cards.innerHTML = `<p class="error">${msg}</p>`;
@@ -220,6 +245,7 @@ export async function renderizarHome(container: HTMLElement): Promise<void> {
   container.innerHTML = renderHome();
 
   await carregarDados("saldo");
+
 
   const select   = document.getElementById("tipo-select") as HTMLSelectElement;
   const btnLimpar  = document.getElementById("btn-limpar")  as HTMLButtonElement;

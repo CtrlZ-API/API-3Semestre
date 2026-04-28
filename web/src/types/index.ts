@@ -19,6 +19,13 @@ export interface SerieHistorica {
   valor: number;
 }
 
+export interface RegistroHistorico {
+  data: string;
+  saldo: number;
+  inadimplencia: number;
+  variacao: number;
+}
+
 export type TipoIndicador = "saldo" | "inadimplencia" | "variacao";
 
 export type Regiao = "Norte" | "Nordeste" | "Centro-Oeste" | "Sudeste" | "Sul";
