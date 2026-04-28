@@ -428,8 +428,12 @@ function lerFiltros(): { dataInicio?: string; dataFim?: string; regiao?: string 
 }
 
 export async function renderizarAnalises(container: HTMLElement): Promise<void> {
+  if (historicoChart) {
+    historicoChart.destroy();
+    historicoChart = null;
+  }
   container.innerHTML = renderAnalises();
-  carregarTudo(); // Carrega dados em segundo plano para exibição imediata do esqueleto
+  await carregarTudo();
 
 
   const btnLimpar = document.getElementById("btn-limpar-analises") as HTMLButtonElement;

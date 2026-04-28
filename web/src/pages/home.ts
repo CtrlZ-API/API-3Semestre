@@ -243,7 +243,8 @@ function lerFiltros(): { tipo: TipoIndicador; dataInicio?: string; dataFim?: str
 
 export async function renderizarHome(container: HTMLElement): Promise<void> {
   container.innerHTML = renderHome();
-  carregarDados("saldo");
+
+  await carregarDados("saldo");
 
 
   const select   = document.getElementById("tipo-select") as HTMLSelectElement;
