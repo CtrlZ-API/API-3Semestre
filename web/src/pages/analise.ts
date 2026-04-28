@@ -1,4 +1,5 @@
-import { getDadosPorEstadosPeriodo } from "../api/client";
+import { getDadosPorEstadosPeriodo, getHistoricoGeral } from "../api/client";
+import { HistoricoChart } from "../components/HistoricoChart";
 import type { Regiao, TipoIndicador } from "../types";
 
 interface DadosCompletosEstado {
@@ -45,6 +46,19 @@ async function getRankingOportunidade(): Promise<RankingOportunidade[]> {
   return response.json();
 }
 
+function renderEmptyState(): string {
+  return `
+    <div class="empty-state">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+      </svg>
+      <h3>Nenhum estado selecionado</h3>
+      <p>Clique em uma linha da tabela abaixo para ver o comparativo detalhado deste estado com a média nacional.</p>
+    </div>
+  `;
+}
+
+
 function renderAnalises(): string {
   return `
     <div class="analises-header">
@@ -82,7 +96,15 @@ function renderAnalises(): string {
     <div class="cards-comparativos-section">
       <h2>Comparativo Estado vs Média Nacional</h2>
       <div id="cards-comparativos-container" class="cards-comparativos-container">
-        <p class="loading">Selecione um estado para comparar</p>
+        ${renderEmptyState()}
+      </div>
+
+      
+      <div id="historico-estado-section" style="margin-top: 2rem; background: #fff; border-radius: 8px; padding: 1.5rem;">
+        <h2 id="historico-titulo" style="font-size: 1.1rem; margin-bottom: 1.5rem;">Evolução Histórica</h2>
+        <div id="historico-chart" style="min-height: 400px; position: relative;">
+          <p class="loading">Carregando histórico...</p>
+        </div>
       </div>
     </div>
 
@@ -125,6 +147,8 @@ function atualizarEstadosPorRegiao(regiao: string): void {
   }
 }
 
+let historicoChart: HistoricoChart | null = null;
+
 async function renderCardsComparativos(
   estadoSelecionado: string,
   dataInicio?: string,
@@ -135,7 +159,7 @@ async function renderCardsComparativos(
   if (!container) return;
 
   if (!estadoSelecionado) {
-    container.innerHTML = `<p class="loading">Selecione um estado para comparar</p>`;
+    container.innerHTML = renderEmptyState();
     return;
   }
 
@@ -163,6 +187,42 @@ async function renderCardsComparativos(
     container.innerHTML = `<p class="error">Erro ao carregar dados do estado</p>`;
   }
 }
+
+async function renderGraficoHistoricoAnalises(
+  regiao?: string,
+  dataInicio?: string,
+  dataFim?: string,
+  estado?: string
+): Promise<void> {
+  const chartContainer = document.getElementById("historico-chart");
+  const titulo = document.getElementById("historico-titulo");
+  if (!chartContainer) return;
+
+  try {
+    if (titulo) {
+      titulo.textContent = estado 
+        ? `Evolução Histórica: ${estado}` 
+        : regiao 
+          ? `Evolução Histórica: Região ${regiao}` 
+          : "Evolução Histórica: Nacional";
+    }
+
+    const dadosHistorico = await getHistoricoGeral(regiao, dataInicio, dataFim, estado);
+
+    if (!historicoChart) {
+      chartContainer.innerHTML = "";
+      historicoChart = new HistoricoChart({ containerId: "historico-chart" });
+    }
+    historicoChart.render(dadosHistorico);
+  } catch (err) {
+    chartContainer.innerHTML = `<p class="error">Erro ao carregar histórico</p>`;
+    if (historicoChart) {
+      historicoChart.destroy();
+      historicoChart = null;
+    }
+  }
+}
+
 
 function renderCardComparativo(
   titulo: string,
@@ -263,18 +323,22 @@ function renderTabelaRanking(dadosCompletos: DadosCompletosEstado[], regiaoFiltr
            </tr>
         </thead>
         <tbody>
-          ${dadosOrdenados.map((d, i) => `
-            <tr>
-              <td class="posicao">${i + 1}</td>
-              <td><span class="estado-nome">${d.estado}</span> <span class="regiao-nome">(${d.regiao})</span></td>
-              <td class="score-valor">${formatarScore(d.score)}</td>
-              <td><span class="categoria-badge ${d.corCategoria}">${d.categoria}</span></td>
-              <td class="align-right">${formatarValor(d.saldo, "saldo")}</td>
-              <td class="align-right">${formatarValor(d.inadimplencia, "inadimplencia")}</td>
-              <td class="align-right">${formatarValor(d.variacao, "variacao")}</td>
-            </tr>
-          `).join("")}
+          ${dadosOrdenados.map((d, i) => {
+            const isSelected = (document.getElementById("estado-select-analises") as HTMLSelectElement)?.value === d.estado;
+            return `
+              <tr class="${isSelected ? 'selected' : ''}" onclick="window.selecionarEstadoParaAnalise('${d.estado}')">
+                <td class="posicao">${i + 1}</td>
+                <td><span class="estado-nome">${d.estado}</span> <span class="regiao-nome">(${d.regiao})</span></td>
+                <td class="score-valor">${formatarScore(d.score)}</td>
+                <td><span class="categoria-badge ${d.corCategoria}">${d.categoria}</span></td>
+                <td class="align-right">${formatarValor(d.saldo, "saldo")}</td>
+                <td class="align-right">${formatarValor(d.inadimplencia, "inadimplencia")}</td>
+                <td class="align-right">${formatarValor(d.variacao, "variacao")}</td>
+              </tr>
+            `;
+          }).join("")}
         </tbody>
+
       </table>
     </div>
   `;
@@ -296,7 +360,20 @@ function renderTabelaRanking(dadosCompletos: DadosCompletosEstado[], regiaoFiltr
     }
     renderTabelaRanking(dadosCompletosCache, (document.getElementById("regiao-select-analises") as HTMLSelectElement)?.value || undefined);
   };
+
+  (window as any).selecionarEstadoParaAnalise = (estado: string) => {
+    const selectEstado = document.getElementById("estado-select-analises") as HTMLSelectElement;
+    if (selectEstado) {
+      selectEstado.value = estado;
+      const { dataInicio, dataFim, regiao } = lerFiltros();
+      renderCardsComparativos(estado, dataInicio, dataFim, regiao);
+      renderGraficoHistoricoAnalises(regiao, dataInicio, dataFim, estado);
+      renderTabelaRanking(dadosCompletosCache, regiao); // Re-render table to update selection highlight
+    }
+  };
+
 }
+
 
 function formatarValor(valor: number, tipo: TipoIndicador): string {
   if (tipo === "saldo") {
@@ -328,9 +405,13 @@ async function carregarTudo(dataInicio?: string, dataFim?: string, regiaoFiltro?
     renderTabelaRanking(dadosCompletosEstado, regiaoFiltro);
     
     const estadoSelect = document.getElementById("estado-select-analises") as HTMLSelectElement;
-    if (estadoSelect && estadoSelect.value) {
-      await renderCardsComparativos(estadoSelect.value, dataInicio, dataFim, regiaoFiltro);
-    }
+    const estado = estadoSelect?.value || "";
+    
+    await Promise.all([
+      renderCardsComparativos(estado, dataInicio, dataFim, regiaoFiltro),
+      renderGraficoHistoricoAnalises(regiaoFiltro, dataInicio, dataFim, estado)
+    ]);
+
   } catch (err) {
     if (container) {
       container.innerHTML = `<p class="error">Erro ao carregar ranking. Verifique se o backend está rodando.</p>`;
@@ -348,7 +429,8 @@ function lerFiltros(): { dataInicio?: string; dataFim?: string; regiao?: string 
 
 export async function renderizarAnalises(container: HTMLElement): Promise<void> {
   container.innerHTML = renderAnalises();
-  await carregarTudo();
+  carregarTudo(); // Carrega dados em segundo plano para exibição imediata do esqueleto
+
 
   const btnLimpar = document.getElementById("btn-limpar-analises") as HTMLButtonElement;
   const inputInicio = document.getElementById("data-inicio-analises") as HTMLInputElement;
@@ -363,10 +445,13 @@ export async function renderizarAnalises(container: HTMLElement): Promise<void> 
 
   const atualizarCards = async () => {
     const { dataInicio, dataFim, regiao } = lerFiltros();
-    if (selectEstado.value) {
-      await renderCardsComparativos(selectEstado.value, dataInicio, dataFim, regiao);
-    }
+    const estado = selectEstado.value;
+    await Promise.all([
+      renderCardsComparativos(estado, dataInicio, dataFim, regiao),
+      renderGraficoHistoricoAnalises(regiao, dataInicio, dataFim, estado)
+    ]);
   };
+
 
   selectRegiao.addEventListener("change", atualizarTudo);
   inputInicio.addEventListener("change", atualizarTudo);
