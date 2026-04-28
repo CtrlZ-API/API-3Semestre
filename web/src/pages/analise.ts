@@ -57,8 +57,34 @@ function renderEmptyState(): string {
     </div>
   `;
 }
+function renderPainelInsight(estado: string, texto: string, categoria: string, corClass: string): string {
+  const icones: Record<string, string> = {
+    "alta-oportunidade": "bi bi-check-square-fill",
+    "moderado": "bi bi-exclamation-circle-fill",
+    "risco-alto": "bi-exclamation-triangle-fill",
+  };
 
+  const icone = icones[corClass] || "bi-info-circle-fill";
 
+  return `
+    <div class="insight-card ${corClass}" 
+         style="display: flex; gap: 1rem; align-items: center; padding: 1.5rem; border-radius: 8px; background: #fff; border-left: 8px solid var(--cor-faixa); box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+      
+      <div class="insight-icon">
+        <i class="bi ${icone}" style="font-size: 2.5rem;"></i>
+      </div>
+
+      <div class="insight-content">
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700;">
+          ${estado}: <span class="badge-${corClass}" style="font-size: 0.9rem; margin-left: 0.5rem;">${categoria}</span>
+        </h3>
+        <p style="margin: 0.5rem 0 0; color: #444; line-height: 1.6; font-size: 1rem;">
+          ${texto}
+        </p>
+      </div>
+    </div>
+  `;
+}
 function renderAnalises(): string {
   return `
     <div class="analises-header">
@@ -92,7 +118,6 @@ function renderAnalises(): string {
         <button id="btn-limpar-analises">Limpar</button>
       </div>
     </div>
-
     <div class="cards-comparativos-section">
       <h2>Comparativo Estado vs Média Nacional</h2>
       <div id="cards-comparativos-container" class="cards-comparativos-container">
