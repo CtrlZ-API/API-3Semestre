@@ -69,29 +69,29 @@ function renderHome(): string {
 let rankingExpandido = false;
 
 function renderCards(dados: ResumoEstado[], tipo: TipoIndicador): void {
-  const mediaNacional = dados.reduce((acc, d) => acc + d.media, 0) / dados.length;
+  const mediaNacional = dados.reduce((acc, d) => acc + d.total, 0) / dados.length;
 
   const valorPrincipal = tipo === "saldo"
     ? dados.reduce((acc, d) => acc + d.total, 0)
     : mediaNacional;
 
   const labelPrincipal = tipo === "saldo"
-    ? "Total nacional"
+    ? "Total"
     : tipo === "variacao"
       ? "Crescimento médio mensal"
-      : "Média nacional";
+      : "Inadimplência Média";
 
   const container = document.getElementById("cards")!;
 
   if (tipo === "saldo") {
-    const maiorSaldo = [...dados].sort((a, b) => b.media - a.media)[0];
+    const maiorSaldo = [...dados].sort((a, b) => b.total - a.total)[0];
     container.innerHTML = `
       ${card(labelPrincipal,     formatarValor(valorPrincipal, tipo),                               "#f8dd73")}
       ${card("Média por estado", formatarValor(mediaNacional, tipo),                              "#f89997")}
-      ${card("Maior estado",     `${maiorSaldo.estado} — ${formatarValor(maiorSaldo.media, tipo)}`, "#6ae098")}
+      ${card("Maior estado", `${maiorSaldo.estado} — ${formatarValor(maiorSaldo.total, tipo)}`, "#6ae098")}
     `;
   } else {
-    const dadosOrdenados = [...dados].sort((a, b) => b.media - a.media);
+    const dadosOrdenados = [...dados].sort((a, b) => b.total - a.total);
     const maiorEstado    = dadosOrdenados[0];
     const menorEstado    = dadosOrdenados[dadosOrdenados.length - 1];
     const labelMaior = tipo === "variacao" ? "Maior crescimento" : "Maior estado";
@@ -99,8 +99,9 @@ function renderCards(dados: ResumoEstado[], tipo: TipoIndicador): void {
 
     container.innerHTML = `
       ${card(labelPrincipal, formatarValor(valorPrincipal, tipo),                                 "#f8dd73")}
-      ${card(labelMaior,     `${maiorEstado.estado} — ${formatarValor(maiorEstado.media, tipo)}`, "#f89997")}
-      ${card(labelMenor,     `${menorEstado.estado} — ${formatarValor(menorEstado.media, tipo)}`, "#6ae098")}
+      ${card(labelMaior, `${maiorEstado.estado} — ${formatarValor(maiorEstado.total, tipo)}`, "#f89997")}
+      ${card(labelMenor, `${menorEstado.estado} — ${formatarValor(menorEstado.total, tipo)}`, "#6ae098")
+}
     `;
   }
 }
@@ -108,10 +109,10 @@ function renderCards(dados: ResumoEstado[], tipo: TipoIndicador): void {
 function renderRanking(dados: ResumoEstado[], tipo: TipoIndicador): void {
   const container = document.getElementById("ranking")!;
 
-  const dadosOrdenados = [...dados].sort((a, b) => b.media - a.media);
+  const dadosOrdenados = [...dados].sort((a, b) => b.total - a.total);
   const limite = rankingExpandido ? dadosOrdenados.length : 10;
   
-  const valorMaximo = Math.max(...dadosOrdenados.map(d => Math.abs(d.media)));
+  const valorMaximo = Math.max(...dadosOrdenados.map(d => Math.abs(d.total)));
 
   container.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 0.75rem;">
@@ -119,7 +120,7 @@ function renderRanking(dados: ResumoEstado[], tipo: TipoIndicador): void {
         .slice(0, limite)
         .map(
           (d, i) => {
-            const valor = d.media;
+            const valor = d.total;
             const percentual = (Math.abs(valor) / valorMaximo) * 100;
             const corBarra = valor >= 0 ? "#9ae1b6" : "#c26d67";
             
@@ -180,16 +181,47 @@ function renderRanking(dados: ResumoEstado[], tipo: TipoIndicador): void {
   }
 }
 
-function card(titulo: string, valor: string, bg: string): string {
+function card(titulo: string, valor: string, accentColor: string): string {
   return `
     <div style="
-      background: ${bg};
-      border-radius: 8px;
-      padding: 1.25rem;
-      border: 1px solid #e0e0e0;
-    ">
-      <p style="font-size: 0.8rem; margin-bottom: 0.4rem;">${titulo}</p>
-      <p style="font-size: 1.1rem; font-weight: bold;">${valor}</p>
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #e5e7f2;
+      box-shadow: 0 1px 3px rgba(43,62,230,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+      cursor: default;
+    "
+    onmouseover="this.style.boxShadow='0 4px 16px rgba(43,62,230,0.08), 0 2px 8px rgba(0,0,0,0.04)'; this.style.transform='translateY(-1px)'"
+    onmouseout="this.style.boxShadow='0 1px 3px rgba(43,62,230,0.06), 0 1px 2px rgba(0,0,0,0.04)'; this.style.transform='translateY(0)'"
+    >
+      <div style="
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: ${accentColor};
+        border-radius: 12px 12px 0 0;
+      "></div>
+      <p style="
+        font-size: 11px;
+        font-weight: 600;
+        color: #6b7280;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+        margin-top: 4px;
+      ">${titulo}</p>
+      <p style="
+        font-size: 22px;
+        font-weight: 700;
+        color: #0d1136;
+        letter-spacing: -0.03em;
+      ">${valor}</p>
     </div>
   `;
 }
