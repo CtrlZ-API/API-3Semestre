@@ -219,7 +219,8 @@ def get_por_periodo(
 def get_historico_geral(
     regiao:      str = Query(default=None),
     data_inicio: str = Query(default=None),
-    data_fim:    str = Query(default=None)
+    data_fim:    str = Query(default=None),
+    estado:      str = Query(default=None)
 ):
     """
     Retorna a série histórica agregada (nacional ou por região) para os 3 indicadores.
@@ -242,6 +243,9 @@ def get_historico_geral(
     if regiao:
         query_base += " AND regiao = ?"
         params.append(regiao)
+    if estado:
+        query_base += " AND estado = ?"
+        params.append(estado.upper())
     if data_inicio:
         # Garante comparação inclusiva com o início do dia
         query_base += " AND data >= ?"
