@@ -26,6 +26,14 @@ export interface RegistroHistorico {
   variacao: number;
 }
 
+export interface ItemRanking {
+  estado: string;  // nome completo do estado, ex: "São Paulo"
+  uf: string;      // sigla, ex: "SP"
+  regiao: string;
+  score: number;   // 0–100
+  posicao: number;
+}
+
 export type TipoIndicador = "saldo" | "inadimplencia" | "variacao";
 
 export type Regiao = "Norte" | "Nordeste" | "Centro-Oeste" | "Sudeste" | "Sul";

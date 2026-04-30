@@ -1,5 +1,7 @@
 import os
 import sqlite3
+import time
+from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -357,3 +359,153 @@ def definir_score (score):
         return ("Moderado", "Inadimplência moderada")
     else:
         return ("Alta Oportunidade", "Baixa inadimplência")
+
+
+# Cache simples em memória para rankings frequentes (TTL de 5 minutos)
+_cache_ranking: dict = {}
+_CACHE_TTL_SEGUNDOS = 300
+
+
+def _calcular_ranking_bruto(
+    regiao: Optional[str],
+    estado: Optional[str],
+    ano: Optional[int],
+    mes: Optional[int],
+    w_saldo: float,
+    w_inad: float,
+    w_var: float,
+) -> list[dict]:
+    """Consulta o banco, aplica filtros e calcula o score de oportunidade por estado."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT
+            estado,
+            regiao,
+            MAX(CASE WHEN tipo = 'saldo' THEN valor ELSE 0 END)          AS v_saldo,
+            MAX(CASE WHEN tipo = 'inadimplencia' THEN valor ELSE 0 END)  AS v_inad,
+            MAX(CASE WHEN tipo = 'variacao' THEN valor ELSE 0 END)       AS v_var
+        FROM dados_credito
+        WHERE 1=1
+    """
+    params: list = []
+
+    if regiao:
+        query += " AND regiao = ?"
+        params.append(regiao)
+    if estado:
+        query += " AND estado = ?"
+        params.append(estado.upper())
+    if ano:
+        query += " AND strftime('%Y', data) = ?"
+        params.append(str(ano))
+    if mes:
+        query += " AND strftime('%m', data) = ?"
+        params.append(f"{mes:02d}")
+
+    query += " GROUP BY estado, regiao"
+
+    try:
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Erro interno no banco: {str(e)}")
+    finally:
+        conn.close()
+
+    if not rows:
+        return []
+
+    dados = [dict(r) for r in rows]
+
+    def get_min_max(key: str):
+        vals = [d[key] for d in dados]
+        return min(vals), max(vals)
+
+    min_s, max_s = get_min_max("v_saldo")
+    min_i, max_i = get_min_max("v_inad")
+    min_v, max_v = get_min_max("v_var")
+
+    resultado = []
+    for d in dados:
+        n_saldo = (d["v_saldo"] - min_s) / ((max_s - min_s) or 1)
+        n_inad  = (d["v_inad"]  - min_i) / ((max_i - min_i) or 1)
+        n_var   = (d["v_var"]   - min_v) / ((max_v - min_v) or 1)
+
+        saude_credito = 1 - n_inad
+        score_bruto   = (n_saldo * w_saldo) + (saude_credito * w_inad) + (n_var * w_var)
+        score_final   = round(max(0.0, min(100.0, score_bruto * 100)), 2)
+
+        resultado.append({
+            "estado":  d["estado"],
+            "uf":      d["estado"],   # preenchido com sigla abaixo
+            "regiao":  d["regiao"],
+            "score":   score_final,
+        })
+
+    return resultado
+
+
+# Mapeamento nome completo → sigla UF (dados do banco armazenam a sigla no campo `estado`)
+_SIGLA_PARA_NOME = {
+    "AC": "Acre", "AL": "Alagoas", "AP": "Amapá", "AM": "Amazonas",
+    "BA": "Bahia", "CE": "Ceará", "DF": "Distrito Federal", "ES": "Espírito Santo",
+    "GO": "Goiás", "MA": "Maranhão", "MT": "Mato Grosso", "MS": "Mato Grosso do Sul",
+    "MG": "Minas Gerais", "PA": "Pará", "PB": "Paraíba", "PR": "Paraná",
+    "PE": "Pernambuco", "PI": "Piauí", "RJ": "Rio de Janeiro", "RN": "Rio Grande do Norte",
+    "RS": "Rio Grande do Sul", "RO": "Rondônia", "RR": "Roraima", "SC": "Santa Catarina",
+    "SP": "São Paulo", "SE": "Sergipe", "TO": "Tocantins",
+}
+
+
+@app.get("/api/ranking")
+def get_ranking(
+    top:    int            = Query(default=27, ge=1, le=27, description="Quantidade de estados a retornar"),
+    regiao: Optional[str]  = Query(default=None, description="Região: Norte, Nordeste, Centro-Oeste, Sudeste ou Sul"),
+    estado: Optional[str]  = Query(default=None, description="Sigla do estado, ex: SP"),
+    ano:    Optional[int]  = Query(default=None, description="Ano de referência, ex: 2023"),
+    mes:    Optional[int]  = Query(default=None, ge=1, le=12, description="Mês de referência (1-12)"),
+    w_saldo: float = Query(default=0.3),
+    w_inad:  float = Query(default=0.3),
+    w_var:   float = Query(default=0.4),
+):
+    """
+    Ranking de estados por score de oportunidade de crédito (0-100).
+    Responde com filtros de região, estado, ano e mês.
+    O resultado top-10 nacional (sem filtros) é armazenado em cache por 5 minutos.
+    """
+    chave_cache = (top, regiao, estado, ano, mes, w_saldo, w_inad, w_var)
+    agora = time.time()
+
+    # Verifica cache
+    if chave_cache in _cache_ranking:
+        dados_cache, timestamp = _cache_ranking[chave_cache]
+        if agora - timestamp < _CACHE_TTL_SEGUNDOS:
+            return dados_cache
+
+    ranking_bruto = _calcular_ranking_bruto(regiao, estado, ano, mes, w_saldo, w_inad, w_var)
+
+    if not ranking_bruto:
+        return []
+
+    # Ordena por score decrescente e aplica o limite
+    ranking_ordenado = sorted(ranking_bruto, key=lambda x: x["score"], reverse=True)[:top]
+
+    # Enriquece com UF (sigla) e nome completo do estado
+    resultado = []
+    for i, item in enumerate(ranking_ordenado):
+        sigla = item["estado"]  # banco armazena a sigla no campo estado
+        resultado.append({
+            "estado":  _SIGLA_PARA_NOME.get(sigla, sigla),
+            "uf":      sigla,
+            "regiao":  item["regiao"],
+            "score":   item["score"],
+            "posicao": i + 1,
+        })
+
+    # Armazena no cache
+    _cache_ranking[chave_cache] = (resultado, agora)
+
+    return resultado
+

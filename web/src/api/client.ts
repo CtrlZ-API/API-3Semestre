@@ -1,4 +1,4 @@
-import type { Regiao, RegistroCredito, RegistroHistorico, ResumoEstado, SerieHistorica, TipoIndicador } from "../types";
+import type { ItemRanking, Regiao, RegistroCredito, RegistroHistorico, ResumoEstado, SerieHistorica, TipoIndicador } from "../types";
 
 const BASE_URL = "/api";
 
@@ -73,4 +73,25 @@ export function getDadosPorPeriodo(
   if (tipo)   params.append("tipo", tipo);
   if (estado) params.append("estado", estado);
   return fetchJson(`${BASE_URL}/dados/periodo/?${params.toString()}`);
+}
+
+/**
+ * Ranking de estados por score de oportunidade de crédito.
+ * Usado pelo mapa coroplético — alimenta a escala de cores.
+ */
+export function getRanking(params?: {
+  top?: number;
+  regiao?: string;
+  estado?: string;
+  ano?: number;
+  mes?: number;
+}): Promise<ItemRanking[]> {
+  const qs = new URLSearchParams();
+  if (params?.top)    qs.append("top",    String(params.top));
+  if (params?.regiao) qs.append("regiao", params.regiao);
+  if (params?.estado) qs.append("estado", params.estado);
+  if (params?.ano)    qs.append("ano",    String(params.ano));
+  if (params?.mes)    qs.append("mes",    String(params.mes));
+  const sufixo = qs.toString() ? `?${qs.toString()}` : "";
+  return fetchJson(`${BASE_URL}/ranking${sufixo}`);
 }
