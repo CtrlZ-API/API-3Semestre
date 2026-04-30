@@ -325,4 +325,15 @@ button {
   color: #2B3EE6;
   font-weight: 500;
 }
-
+
+.insight-card.alta-oportunidade {
+  --cor-faixa: #22c55e; 
+}
+
+.insight-card.moderado {
+  --cor-faixa: #f59e0b; 
+}
+
+.insight-card.risco-alto {
+  --cor-faixa: #ef4444;
+}

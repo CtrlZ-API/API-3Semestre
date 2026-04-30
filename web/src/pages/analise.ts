@@ -57,8 +57,34 @@ function renderEmptyState(): string {
     </div>
   `;
 }
+function renderPainelInsight(estado: string, texto: string, categoria: string, corClass: string): string {
+  const icones: Record<string, string> = {
+    "alta-oportunidade": "bi bi-check-square-fill",
+    "moderado": "bi bi-exclamation-circle-fill",
+    "risco-alto": "bi-exclamation-triangle-fill",
+  };
 
+  const icone = icones[corClass] || "bi-info-circle-fill";
 
+  return `
+    <div class="insight-card ${corClass}" 
+         style="display: flex; gap: 1rem; align-items: center; padding: 1.5rem; border-radius: 8px; background: #fff; border-left: 8px solid var(--cor-faixa); box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+      
+       <div class="insight-icon">
+        <i class="bi ${icone}" style="font-size: 2.5rem; color: var(--cor-faixa);"></i>
+      </div>
+
+      <div class="insight-content">
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700;">
+          ${estado}: <span class="badge-${corClass}" style="font-size: 0.9rem; margin-left: 0.5rem;">${categoria}</span>
+        </h3>
+        <p style="margin: 0.5rem 0 0; color: #444; line-height: 1.6; font-size: 1rem;">
+          ${texto}
+        </p>
+      </div>
+    </div>
+  `;
+}
 function renderAnalises(): string {
   return `
     <div class="analises-header">
@@ -93,13 +119,14 @@ function renderAnalises(): string {
       </div>
     </div>
 
+    <div id="painel-insights-container" style="margin-bottom: 2rem; width: 100%;"></div>
+
     <div class="cards-comparativos-section">
       <h2>Comparativo Estado vs Média Nacional</h2>
       <div id="cards-comparativos-container" class="cards-comparativos-container">
         ${renderEmptyState()}
       </div>
 
-      
       <div id="historico-estado-section" style="margin-top: 2rem; background: #fff; border-radius: 8px; padding: 1.5rem;">
         <h2 id="historico-titulo" style="font-size: 1.1rem; margin-bottom: 1.5rem;">Evolução Histórica</h2>
         <div id="historico-chart" style="min-height: 400px; position: relative;">
@@ -156,10 +183,13 @@ async function renderCardsComparativos(
   regiao?: string
 ): Promise<void> {
   const container = document.getElementById("cards-comparativos-container");
+  const insightContainer = document.getElementById("painel-insights-container");
+  
   if (!container) return;
 
   if (!estadoSelecionado) {
     container.innerHTML = renderEmptyState();
+    if (insightContainer) insightContainer.innerHTML = "";
     return;
   }
 
@@ -178,13 +208,29 @@ async function renderCardsComparativos(
     const mediaNacionalInad = dadosInad.reduce((acc, d) => acc + d.media, 0) / dadosInad.length;
     const mediaNacionalVariacao = dadosVariacao.reduce((acc, d) => acc + d.media, 0) / dadosVariacao.length;
 
+    // 1. Renderiza os cards
     container.innerHTML = `
       ${renderCardComparativo("Saldo de Crédito", estadoSaldo?.media ?? 0, mediaNacionalSaldo, "saldo", "Maior saldo é melhor ↑")}
       ${renderCardComparativo("Inadimplência", estadoInad?.media ?? 0, mediaNacionalInad, "inadimplencia", "Menor inadimplência é melhor ↓")}
       ${renderCardComparativo("Crescimento da Carteira", estadoVariacao?.media ?? 0, mediaNacionalVariacao, "variacao", "Maior crescimento é melhor ↑")}
     `;
+
+    // 2. Renderiza o Insight (DENTRO do try, após os dados chegarem)
+    if (insightContainer) {
+      // Usamos o score que vem do cache do ranking ou calculamos uma lógica simples aqui
+      const scoreTemp = estadoSaldo ? (estadoSaldo.media / mediaNacionalSaldo) * 50 : 0;
+      const { texto, corClass } = getCategoria(scoreTemp > 100 ? 80 : scoreTemp); // Lógica de fallback para o score
+      
+      const textoInsight = corClass === 'alta-oportunidade' 
+        ? `O estado de ${estadoSelecionado} apresenta indicadores sólidos em relação à média nacional, sugerindo potencial de expansão.` 
+        : `Análise cautelar necessária para ${estadoSelecionado}: indicadores de risco ou saldo abaixo da média nacional observados.`;
+
+      insightContainer.innerHTML = renderPainelInsight(estadoSelecionado, textoInsight, texto, corClass);
+    }
+
   } catch (err) {
     container.innerHTML = `<p class="error">Erro ao carregar dados do estado</p>`;
+    console.error(err);
   }
 }
 
