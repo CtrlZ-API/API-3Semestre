@@ -261,15 +261,19 @@ button {
 }
 
 .categoria-badge.risco-alto {
-  background: #c26d67;
+  background: #dc2626;
+  color: white;
+
 }
 
 .categoria-badge.moderado {
-  background: #f8dd73;
+  background: #0077b6;
+  color: white;
 }
 
 .categoria-badge.alta-oportunidade {
-  background: #6ae098;
+  background: #22c55e;
+  color: white;
 }
 
 /* Empty State */
@@ -342,9 +346,58 @@ button {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 1.5rem;
-  align-items: start;
+  align-items: stretch; 
   margin-bottom: 2rem;
 }
+
+/* Painel de Insight */
+#painel-insights-container {
+  height: 100%;
+}
+
+.insight-card {
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 12px;
+}
+
+.insight-card .insight-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+  padding: 4px 2px;
+}
+
+.insight-card .insight-header i {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.insight-card .insight-header span {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.insight-card .insight-body {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 16px 18px;
+  color: #111827;
+  font-size: 0.97rem;
+  line-height: 1.65;
+  font-weight: 500;
+  flex: 1;
+}
+
+.insight-card.alta-oportunidade { background: #22c55e; border-color: #22c55e; }
+.insight-card.moderado         { background: #0077b6; border-color: #0077b6; }
+.insight-card.risco-alto        { background: #dc2626; border-color: #dc2626; }
 
 @media (max-width: 992px) {
   .analises-top-grid {
@@ -388,4 +441,4 @@ button {
   transition: opacity 0.15s ease;
 }
 
-
+
