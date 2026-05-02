@@ -38,9 +38,9 @@
 | 1  | "Como analista de crédito da DM, quero coletar e integrar dados públicos do Banco Central (concessão de crédito, inadimplência e indicadores econômicos) para alimentar o sistema com informações oficiais." | 1      | Alta                | 45h |✅|  05/04            |
 | 2  | "Como gestor da DM, quero visualizar um dashboard funcional com o indicador de volume de concessão de crédito por região (estados), utilizando dados reais do Banco Central, para validar a integração e iniciar as análises desde a primeira entrega."  | 1      | Alta                | 40h |✅ |  05/04            |
 | 3  | "Como analista de crédito, quero filtrar os dados por estado e período mensal, com capacidade de visualizar séries históricas completas, para identificar sazonalidade e variações de inadimplência mês a mês." | 1      | Alta | 30h | ✅ |  05/04            |
-| 4  | "Como analista de crédito da DM, quero visualizar um ranking de oportunidades por região, baseado nos indicadores de crédito, inadimplência e econômicos, para orientar decisões de expansão."   | 2      | Alta                | 35h |⏳|  03/05            |
-| 5  | "Como analista de crédito da DM, quero visualizar dashboards interativos com indicadores combinados (concessão x inadimplência x potencial), para identificar oportunidades sustentáveis de expansão."                 | 2      | Alta                | 40h |⏳|  03/05            |
-| 6  | "Como analista de crédito da DM, quero receber alertas visuais para indicadores críticos (ex: inadimplência acima da média), para rápida identificação de riscos."     | 2     | Média               | 25h | ⏳ |  03/05             |
+| 4  | "Como analista de crédito da DM, quero visualizar um ranking de oportunidades por região, baseado nos indicadores de crédito, inadimplência e econômicos, para orientar decisões de expansão."   | 2      | Alta                | 35h | ✅ |  03/05            |
+| 5  | "Como analista de crédito da DM, quero visualizar dashboards interativos com indicadores combinados (concessão x inadimplência x potencial), para identificar oportunidades sustentáveis de expansão."                 | 2      | Alta                | 40h | ✅ |  03/05            |
+| 6  | "Como analista de crédito da DM, quero receber alertas visuais para indicadores críticos (ex: inadimplência acima da média), para rápida identificação de riscos."     | 2     | Média               | 25h | ✅ |  03/05             |
 | 7  | "Como analista de crédito da DM, quero gerar e exportar relatórios automáticos em PDF/Excel com as análises de crédito regional, para compartilhamento externo e apresentações."      | 3  | Alta             | 28h | ⏳ |  31/05            |
 | 8  | "Como usuário da DM, quero me cadastrar e fazer login no sistema de forma segura, para acessar as funcionalidades conforme meu perfil de acesso." | 3    | Biaxa                | 20h |⏳|  31/05            |
 | 9  | "Como analista de crédito da DM, quero acessar o sistema em dispositivos móveis e tablets durante reuniões externas, garantindo apresentações em qualquer local." | 3    | Baixa                | 35h |⏳|  31/05            |
@@ -50,7 +50,7 @@
 
 ### Sprint - 1️⃣ 🎯 ([Clique aqui](/documents/Sprints/Sprint1)): Concluída ✅
 
-### Sprint - 2️⃣ 🎯 ([Clique aqui](/documents/Sprints/Sprint2)) : Não iniciada ⏳
+### Sprint - 2️⃣ 🎯 ([Clique aqui](/documents/Sprints/Sprint2)) : Concluída ✅
 
 ### Sprint - 3️⃣ 🎯 ([Clique aqui](/documents/Sprints/Sprint3)) : Não iniciada ⏳
 
