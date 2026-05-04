@@ -1,5 +1,6 @@
-import { getDadosPorEstadosPeriodo, getHistoricoGeral } from "../api/client";
+import { getDadosPorEstadosPeriodo, getHistoricoGeral, getRanking } from "../api/client";
 import { HistoricoChart } from "../components/HistoricoChart";
+import { MapaCoroplético } from "../components/MapaCoroplético";
 import type { Regiao, TipoIndicador } from "../types";
 
 interface DadosCompletosEstado {
@@ -119,7 +120,16 @@ function renderAnalises(): string {
       </div>
     </div>
 
-    <div id="painel-insights-container" style="margin-bottom: 2rem; width: 100%;"></div>
+    <div class="analises-top-grid">
+      <div class="mapa-coropletico-section" style="margin-bottom: 0;">
+        <h2>Distribuição por Score de Oportunidade</h2>
+        <p class="mapa-subtitulo">Intensidade de cor representa o score de crédito de cada estado (0 = baixo, 100 = alto).</p>
+        <div id="mapa-coropletico-container" style="position: relative; min-height: 250px;">
+          <p class="loading">Carregando mapa...</p>
+        </div>
+      </div>
+      <div id="painel-insights-container"></div>
+    </div>
 
     <div class="cards-comparativos-section">
       <h2>Comparativo Estado vs Média Nacional</h2>
@@ -148,6 +158,7 @@ let colunaOrdenada: keyof DadosCompletosEstado = "score";
 let ordemAscendente = false;
 let dadosCompletosCache: DadosCompletosEstado[] = [];
 let todosEstadosCache: { estado: string; regiao: string }[] = [];
+let mapaCoroplético: MapaCoroplético | null = null;
 
 function atualizarEstadosPorRegiao(regiao: string): void {
   const selectEstado = document.getElementById("estado-select-analises") as HTMLSelectElement;
@@ -189,7 +200,15 @@ async function renderCardsComparativos(
 
   if (!estadoSelecionado) {
     container.innerHTML = renderEmptyState();
-    if (insightContainer) insightContainer.innerHTML = "";
+    if (insightContainer) {
+      insightContainer.innerHTML = `
+        <div class="empty-state" style="padding: 2.5rem 1.5rem; background: #fafafa; border-radius: 8px; border: 1px dashed #d0d0d0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%;">
+          <i class="bi bi-lightbulb" style="font-size: 2rem; color: #ccc; margin-bottom: 0.5rem;"></i>
+          <h3 style="font-size: 1rem; color: #666; margin-bottom: 0.5rem;">Nenhum Estado Selecionado</h3>
+          <p style="font-size: 0.8rem; color: #999; margin: 0;">Selecione um estado abaixo ou no filtro superior para exibir seu insight de oportunidade.</p>
+        </div>
+      `;
+    }
     return;
   }
 
@@ -439,8 +458,23 @@ async function carregarTudo(dataInicio?: string, dataFim?: string, regiaoFiltro?
   if (container) container.innerHTML = `<p class="loading">Carregando ranking</p>`;
   if (cardsContainer) cardsContainer.innerHTML = `<p class="loading">Escolha um estado</p>`;
   
+  // Extrai ano e mês do filtro de data_inicio existente
+  let anoMapa: number | undefined;
+  let mesMapa: number | undefined;
+  if (dataInicio) {
+    const partes = dataInicio.split("-");
+    if (partes.length >= 2) {
+      anoMapa = Number(partes[0]);
+      mesMapa = Number(partes[1]);
+    }
+  }
+
   try {
-    const rankingData = await getRankingOportunidade();
+    const [rankingData, dadosRankingMapa] = await Promise.all([
+      getRankingOportunidade(),
+      getRanking({ regiao: regiaoFiltro, ano: anoMapa, mes: mesMapa }),
+    ]);
+
     const dadosCompletosEstado = processarRanking(rankingData);
     
     if (todosEstadosCache.length === 0) {
@@ -453,6 +487,16 @@ async function carregarTudo(dataInicio?: string, dataFim?: string, regiaoFiltro?
     const estadoSelect = document.getElementById("estado-select-analises") as HTMLSelectElement;
     const estado = estadoSelect?.value || "";
     
+    // Inicializa o mapa somente na primeira vez; depois reutiliza a instância
+    const mapaContainer = document.getElementById("mapa-coropletico-container");
+    if (mapaContainer) {
+      if (!mapaCoroplético) {
+        mapaContainer.innerHTML = "";
+        mapaCoroplético = new MapaCoroplético({ containerId: "mapa-coropletico-container" });
+      }
+      await mapaCoroplético.render(dadosRankingMapa, regiaoFiltro);
+    }
+
     await Promise.all([
       renderCardsComparativos(estado, dataInicio, dataFim, regiaoFiltro),
       renderGraficoHistoricoAnalises(regiaoFiltro, dataInicio, dataFim, estado)
@@ -474,9 +518,14 @@ function lerFiltros(): { dataInicio?: string; dataFim?: string; regiao?: string 
 }
 
 export async function renderizarAnalises(container: HTMLElement): Promise<void> {
+  // Destrói instâncias anteriores antes de reinicializar a página
   if (historicoChart) {
     historicoChart.destroy();
     historicoChart = null;
+  }
+  if (mapaCoroplético) {
+    mapaCoroplético.destroy();
+    mapaCoroplético = null;
   }
   container.innerHTML = renderAnalises();
   await carregarTudo();
@@ -502,17 +551,18 @@ export async function renderizarAnalises(container: HTMLElement): Promise<void> 
     ]);
   };
 
-
+  // Filtros que recarregam tudo (inclusive o mapa)
   selectRegiao.addEventListener("change", atualizarTudo);
   inputInicio.addEventListener("change", atualizarTudo);
   inputFim.addEventListener("change", atualizarTudo);
+
   selectEstado.addEventListener("change", atualizarCards);
 
   btnLimpar.addEventListener("click", () => {
-    inputInicio.value = "";
-    inputFim.value = "";
+    inputInicio.value  = "";
+    inputFim.value     = "";
     selectRegiao.value = "";
     selectEstado.value = "";
     atualizarTudo();
   });
-}
+}

@@ -337,3 +337,55 @@ button {
 .insight-card.risco-alto {
   --cor-faixa: #ef4444;
 }
+
+.analises-top-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 992px) {
+  .analises-top-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Seção do mapa coroplético */
+.mapa-coropletico-section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.mapa-coropletico-section h2 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: #333;
+}
+
+.mapa-subtitulo {
+  font-size: 0.78rem;
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+/* Tooltip flutuante do mapa */
+.mapa-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #dde0f0;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  box-shadow: 0 4px 16px rgba(43, 62, 230, 0.10);
+  z-index: 10;
+  max-width: 200px;
+  transition: opacity 0.15s ease;
+}
+
+
