@@ -193,8 +193,8 @@ export class MapaCoroplético {
     const item = uf ? scoresPorUF.get(uf) : undefined;
     const nome = feat.properties?.name || feat.properties?.nome || uf || "—";
     const score = item ? item.score.toFixed(1) : "—";
-    const icone = item ? (item.score >= 70 ? "↑" : item.score >= 40 ? "~" : "↓") : "";
-    const corScore = item ? (item.score >= 70 ? "#22c55e" : item.score >= 40 ? "#f59e0b" : "#ef4444") : "#888";
+    const icone = item ? (item.score >= 53 ? "↑" : item.score >= 40 ? "~" : "↓") : "";
+    const corScore = item ? (item.score >= 53 ? "#22c55e" : item.score >= 40 ? "#f59e0b" : "#ef4444") : "#888";
 
     this.tooltip.innerHTML = `
       <strong>${nome}</strong> <span style="color:#888;font-size:0.8em">${uf ?? ""}</span><br/>
