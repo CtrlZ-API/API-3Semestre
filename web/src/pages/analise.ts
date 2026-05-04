@@ -16,20 +16,31 @@ interface DadosCompletosEstado {
 
 interface RankingOportunidade {
   estado: string;
+  uf: string;
   regiao: string;
-  score_oportunidade: number;
-  indicadores: {
-    saldo_bruto: number;
-    inadimplencia_bruto: number;
-    variacao_bruta: number;
+  score: number;
+  posicao: number;
+  componentes: {
+    volume: number;
+    saude: number;
+    tendencia: number;
+    estabilidade: number;
+    penetracao: number;
+  };
+  indicadores_brutos: {
+    saldo_ultimo_mes: number;
+    inadimplencia: number;
+    tendencia_12m: number;
+    coef_variacao_3a: number;
+    saldo_per_capita: number;
   };
 }
 
 function getCategoria(score: number): { texto: string; corClass: string } {
-  if (score <= 40) {
+  if (score < 40) {
     return { texto: "Risco alto", corClass: "risco-alto" };
-  } else if (score <= 69) {
-    return { texto: "Moderado", corClass: "moderado" };
+  } else if (score < 53) {
+    return { texto: "Risco Moderado", corClass: "moderado" };
   } else {
     return { texto: "Alta oportunidade", corClass: "alta-oportunidade" };
   }
@@ -40,10 +51,8 @@ function formatarScore(score: number): string {
 }
 
 async function getRankingOportunidade(): Promise<RankingOportunidade[]> {
-  const response = await fetch("/api/oportunidade/ranking");
-  if (!response.ok) {
-    throw new Error(`Erro ao buscar ranking: ${response.status}`);
-  }
+  const response = await fetch("/api/opurtunidade/ranking/v2");
+  if (!response.ok) throw new Error(`Erro ao buscar ranking: ${response.status}`);
   return response.json();
 }
 
@@ -60,28 +69,21 @@ function renderEmptyState(): string {
 }
 function renderPainelInsight(estado: string, texto: string, categoria: string, corClass: string): string {
   const icones: Record<string, string> = {
-    "alta-oportunidade": "bi bi-check-square-fill",
-    "moderado": "bi bi-exclamation-circle-fill",
-    "risco-alto": "bi-exclamation-triangle-fill",
+    "alta-oportunidade": "bi-gem",
+    "moderado":          "bi-cash-stack",
+    "risco-alto":        "bi-exclamation-triangle-fill",
   };
 
-  const icone = icones[corClass] || "bi-info-circle-fill";
+  const icone = icones[corClass] ?? "bi-info-circle-fill";
 
   return `
-    <div class="insight-card ${corClass}" 
-         style="display: flex; gap: 1rem; align-items: center; padding: 1.5rem; border-radius: 8px; background: #fff; border-left: 8px solid var(--cor-faixa); box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-      
-       <div class="insight-icon">
-        <i class="bi ${icone}" style="font-size: 2.5rem; color: var(--cor-faixa);"></i>
+    <div class="insight-card ${corClass}">
+      <div class="insight-header">
+        <i class="bi ${icone}"></i>
+        <span>${categoria}</span>
       </div>
-
-      <div class="insight-content">
-        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700;">
-          ${estado}: <span class="badge-${corClass}" style="font-size: 0.9rem; margin-left: 0.5rem;">${categoria}</span>
-        </h3>
-        <p style="margin: 0.5rem 0 0; color: #444; line-height: 1.6; font-size: 1rem;">
-          ${texto}
-        </p>
+      <div class="insight-body">
+        ${texto}
       </div>
     </div>
   `;
@@ -237,15 +239,47 @@ async function renderCardsComparativos(
     // 2. Renderiza o Insight (DENTRO do try, após os dados chegarem)
     if (insightContainer) {
       // Usamos o score que vem do cache do ranking ou calculamos uma lógica simples aqui
-      const scoreTemp = estadoSaldo ? (estadoSaldo.media / mediaNacionalSaldo) * 50 : 0;
-      const { texto, corClass } = getCategoria(scoreTemp > 100 ? 80 : scoreTemp); // Lógica de fallback para o score
-      
-      const textoInsight = corClass === 'alta-oportunidade' 
-        ? `O estado de ${estadoSelecionado} apresenta indicadores sólidos em relação à média nacional, sugerindo potencial de expansão.` 
-        : `Análise cautelar necessária para ${estadoSelecionado}: indicadores de risco ou saldo abaixo da média nacional observados.`;
+      const dadosCacheEstado = dadosCompletosCache.find(d => d.estado === estadoSelecionado);
+      const scoreReal = dadosCacheEstado?.score ?? 0;
+      const { texto, corClass } = getCategoria(scoreReal);
 
-      insightContainer.innerHTML = renderPainelInsight(estadoSelecionado, textoInsight, texto, corClass);
-    }
+      const saldoVsMedia = ((estadoSaldo?.media ?? 0) / mediaNacionalSaldo - 1) * 100;
+      const inadVsMedia  = ((estadoInad?.media  ?? 0) / mediaNacionalInad  - 1) * 100;
+      const varVsMedia   = ((estadoVariacao?.media ?? 0) / mediaNacionalVariacao - 1) * 100;
+
+      const fmtPct = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
+
+      const pontosSaldo = saldoVsMedia >= 10
+        ? `carteira de crédito <strong>${fmtPct(saldoVsMedia)} acima</strong> da média nacional`
+        : saldoVsMedia <= -10
+          ? `carteira de crédito <strong>${fmtPct(saldoVsMedia)} abaixo</strong> da média nacional`
+          : `carteira de crédito alinhada à média nacional (${fmtPct(saldoVsMedia)})`;
+
+      const pontosInad = inadVsMedia <= -10
+        ? `inadimplência <strong>${fmtPct(Math.abs(inadVsMedia))} inferior</strong> à média, indicando portfólio mais saudável`
+        : inadVsMedia >= 10
+          ? `inadimplência <strong>${fmtPct(inadVsMedia)} superior</strong> à média, sinalizando risco elevado de default`
+          : `inadimplência dentro da faixa nacional (${fmtPct(inadVsMedia)})`;
+
+      const pontosVar = varVsMedia >= 5
+        ? `crescimento da carteira em aceleração (<strong>${fmtPct(varVsMedia)} acima</strong> da média), sugerindo demanda aquecida`
+        : varVsMedia <= -5
+          ? `crescimento <strong>${fmtPct(varVsMedia)} abaixo</strong> da média, indicando retração ou mercado saturado`
+          : `expansão de carteira em ritmo médio (${fmtPct(varVsMedia)})`;
+
+      const temNegativo = inadVsMedia >= 10 || varVsMedia <= -5 || saldoVsMedia <= -10;
+
+      const conclusao = corClass === "alta-oportunidade"
+        ? `O conjunto dos indicadores posiciona <strong>${estadoSelecionado}</strong> como mercado prioritário para expansão de crédito no período analisado.`
+        : corClass === "moderado"
+          ? temNegativo
+            ? `Apesar dos pontos de atenção acima, o score consolidado classifica <strong>${estadoSelecionado}</strong> como <strong>moderado</strong> — outros fatores como tendência histórica, estabilidade e penetração de mercado compensam parcialmente os riscos identificados.`
+            : `<strong>${estadoSelecionado}</strong> apresenta perfil equilibrado — recomenda-se análise segmentada por produto antes de ampliar exposição.`
+          : `Os indicadores de <strong>${estadoSelecionado}</strong> apontam para risco operacional elevado; expansão de crédito exige critérios mais restritivos.`;
+
+      const textoInsight = `${estadoSelecionado} registra ${pontosSaldo}, com ${pontosInad} e ${pontosVar}. ${conclusao}`;
+            insightContainer.innerHTML = renderPainelInsight(estadoSelecionado, textoInsight, texto, corClass);
+          } 
 
   } catch (err) {
     container.innerHTML = `<p class="error">Erro ao carregar dados do estado</p>`;
@@ -325,25 +359,25 @@ function renderCardComparativo(
   `;
 }
 
+
 function processarRanking(rankingData: RankingOportunidade[]): DadosCompletosEstado[] {
-  const resultados: DadosCompletosEstado[] = [];
+  const resultados: DadosCompletosEstado[] = []; // ← linha que faltou
   
   for (const item of rankingData) {
-    const { texto, corClass } = getCategoria(item.score_oportunidade);
-    
+    const { texto, corClass } = getCategoria(item.score);
     resultados.push({
-      estado: item.estado,
+      estado: item.uf,
       regiao: item.regiao,
-      saldo: item.indicadores.saldo_bruto,
-      inadimplencia: item.indicadores.inadimplencia_bruto,
-      variacao: item.indicadores.variacao_bruta,
-      score: item.score_oportunidade,
+      saldo: item.indicadores_brutos.saldo_ultimo_mes,
+      inadimplencia: item.indicadores_brutos.inadimplencia,
+      variacao: item.indicadores_brutos.tendencia_12m,
+      score: item.score,
       categoria: texto,
       corCategoria: corClass
     });
   }
-  
-  return resultados;
+
+  return resultados; // ← e o return também
 }
 
 function renderTabelaRanking(dadosCompletos: DadosCompletosEstado[], regiaoFiltro?: string): void {
@@ -470,10 +504,15 @@ async function carregarTudo(dataInicio?: string, dataFim?: string, regiaoFiltro?
   }
 
   try {
-    const [rankingData, dadosRankingMapa] = await Promise.all([
-      getRankingOportunidade(),
-      getRanking({ regiao: regiaoFiltro, ano: anoMapa, mes: mesMapa }),
-    ]);
+    const rankingData = await getRankingOportunidade();
+
+    const dadosRankingMapa = rankingData.map(d => ({
+      uf: d.uf,        
+      estado: d.uf,
+      regiao: d.regiao,
+      score: d.score,
+      posicao: d.posicao,
+    }));
 
     const dadosCompletosEstado = processarRanking(rankingData);
     
@@ -565,4 +604,4 @@ export async function renderizarAnalises(container: HTMLElement): Promise<void> 
     selectEstado.value = "";
     atualizarTudo();
   });
-}
+}
