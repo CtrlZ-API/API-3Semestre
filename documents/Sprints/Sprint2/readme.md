@@ -2,7 +2,11 @@
 Sprint concluída ✅
 <br>
 
-## Base do Sistema Funcionando:
+## Vídeo da página de análise:
+
+
+
+https://github.com/user-attachments/assets/57167dfc-fe81-4a76-b15e-c080e060405f
 
 
 
@@ -40,7 +44,7 @@ Sprint concluída ✅
    - **DoD:**  
      - [x] API com endpoint retornando indicadores combinados.
      - [x] Dashboard com múltiplos gráficos (ex: comparação entre indicadores) implementado.
-     - [x]Integração front-end + API funcionando sem erros.
+     - [x] Integração front-end + API funcionando sem erros.
 
 
 
