@@ -48,9 +48,9 @@
 
 ## 📅Sprints
 
-### Sprint - 1️⃣ 🎯 ([Clique aqui](/documents/Sprints/Sprint1)): Concluída ✅
+### Sprint - 1️⃣ 🎯 ([Clique aqui para acessar o vídeo da sprint](/documents/Sprints/Sprint1)): Concluída ✅
 
-### Sprint - 2️⃣ 🎯 ([Clique aqui](/documents/Sprints/Sprint2)) : Concluída ✅
+### Sprint - 2️⃣ 🎯 ([([Clique aqui para acessar o vídeo da sprint](/documents/Sprints/Sprint2)) : Concluída ✅
 
 ### Sprint - 3️⃣ 🎯 ([Clique aqui](/documents/Sprints/Sprint3)) : Não iniciada ⏳
 
