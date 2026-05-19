@@ -717,3 +717,192 @@ def get_ranking_v2(
 
     _cache_ranking_v2[chave_cache] = (resultado, agora)
     return resultado
+
+
+# ── Cache para relatório (TTL de 5 minutos) ──
+_cache_relatorio: dict = {}
+_CACHE_TTL_RELATORIO = 300
+
+
+def _construir_filtros_relatorio(
+    estado: Optional[str],
+    ano: Optional[int],
+    mes: Optional[int],
+) -> tuple[str, list]:
+    """Monta cláusulas WHERE dinâmicas seguindo o padrão do projeto."""
+    clausulas = ""
+    params: list = []
+
+    if estado:
+        clausulas += " AND estado = ?"
+        params.append(estado.upper())
+    if ano:
+        clausulas += " AND strftime('%Y', data) = ?"
+        params.append(str(ano))
+    if mes:
+        clausulas += " AND strftime('%m', data) = ?"
+        params.append(f"{mes:02d}")
+
+    return clausulas, params
+
+
+@app.get("/api/relatorio")
+def get_relatorio(
+    estado: Optional[str] = Query(default=None, description="Sigla do estado, ex: SP"),
+    ano:    Optional[int] = Query(default=None, description="Ano de referência, ex: 2025"),
+    mes:    Optional[int] = Query(default=None, ge=1, le=12, description="Mês de referência (1-12)"),
+):
+    """
+    Retorna dados consolidados para geração de relatório.
+    Inclui resumo nacional, breakdown por estado (com score e per capita)
+    e série temporal mensal — tudo filtrado opcionalmente por estado, ano e mês.
+    """
+    chave_cache = (estado, ano, mes)
+    agora = time.time()
+
+    if chave_cache in _cache_relatorio:
+        dados_cache, timestamp = _cache_relatorio[chave_cache]
+        if agora - timestamp < _CACHE_TTL_RELATORIO:
+            return dados_cache
+
+    filtros, params_base = _construir_filtros_relatorio(estado, ano, mes)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        # ── Query 1: Resumo agregado ──
+        query_resumo = f"""
+            SELECT
+                ROUND(SUM(CASE WHEN tipo = 'saldo' THEN valor ELSE 0 END), 2)            AS saldo_total,
+                ROUND(AVG(CASE WHEN tipo = 'saldo' THEN valor ELSE NULL END), 2)         AS saldo_medio,
+                ROUND(AVG(CASE WHEN tipo = 'inadimplencia' THEN valor ELSE NULL END), 2) AS inad_media,
+                ROUND(MIN(CASE WHEN tipo = 'inadimplencia' THEN valor ELSE NULL END), 2) AS inad_min,
+                ROUND(MAX(CASE WHEN tipo = 'inadimplencia' THEN valor ELSE NULL END), 2) AS inad_max,
+                ROUND(SUM(CASE WHEN tipo = 'variacao' THEN valor ELSE 0 END), 2)         AS var_total,
+                ROUND(AVG(CASE WHEN tipo = 'variacao' THEN valor ELSE NULL END), 2)      AS var_media,
+                COUNT(DISTINCT estado) AS total_estados,
+                COUNT(*)               AS total_registros,
+                MIN(data)              AS data_inicio,
+                MAX(data)              AS data_fim
+            FROM dados_credito
+            WHERE 1=1 {filtros}
+        """
+        cursor.execute(query_resumo, params_base)
+        resumo_row = dict(cursor.fetchone())
+
+        # ── Query 2: Breakdown por estado ──
+        query_estados = f"""
+            SELECT
+                estado, regiao,
+                ROUND(SUM(CASE WHEN tipo = 'saldo' THEN valor ELSE 0 END), 2)            AS saldo,
+                ROUND(AVG(CASE WHEN tipo = 'inadimplencia' THEN valor ELSE NULL END), 2) AS inadimplencia,
+                ROUND(SUM(CASE WHEN tipo = 'variacao' THEN valor ELSE 0 END), 2)         AS variacao
+            FROM dados_credito
+            WHERE 1=1 {filtros}
+            GROUP BY estado, regiao
+            ORDER BY saldo DESC
+        """
+        cursor.execute(query_estados, params_base)
+        rows_estados = [dict(r) for r in cursor.fetchall()]
+
+        # ── Query 3: Série temporal ──
+        query_serie = f"""
+            SELECT
+                data,
+                ROUND(SUM(CASE WHEN tipo = 'saldo' THEN valor ELSE 0 END), 2)            AS saldo_nacional,
+                ROUND(AVG(CASE WHEN tipo = 'inadimplencia' THEN valor ELSE NULL END), 2) AS inadimplencia_media,
+                ROUND(SUM(CASE WHEN tipo = 'variacao' THEN valor ELSE 0 END), 2)         AS variacao_nacional
+            FROM dados_credito
+            WHERE 1=1 {filtros}
+            GROUP BY data
+            ORDER BY data ASC
+        """
+        cursor.execute(query_serie, params_base)
+        rows_serie = [dict(r) for r in cursor.fetchall()]
+
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Erro interno no banco: {str(e)}")
+    finally:
+        conn.close()
+
+    # ── Calcular score de oportunidade e saldo per capita por estado ──
+    por_estado = []
+
+    if rows_estados:
+        # Normalização Min-Max para o score
+        def get_min_max(key: str):
+            vals = [d[key] for d in rows_estados if d[key] is not None]
+            if not vals:
+                return 0, 1
+            return min(vals), max(vals)
+
+        min_s, max_s = get_min_max("saldo")
+        min_i, max_i = get_min_max("inadimplencia")
+        min_v, max_v = get_min_max("variacao")
+
+        for d in rows_estados:
+            uf = d["estado"]
+            pop = POPULACAO_ESTADOS.get(uf, 1)
+
+            # Normalização Min-Max (0.0 a 1.0)
+            n_saldo = (d["saldo"] - min_s) / ((max_s - min_s) or 1)
+            n_inad  = ((d["inadimplencia"] or 0) - min_i) / ((max_i - min_i) or 1)
+            n_var   = (d["variacao"] - min_v) / ((max_v - min_v) or 1)
+
+            # Inversão da inadimplência: menor = melhor
+            saude_credito = 1 - n_inad
+
+            # Pesos padrão: saldo=0.3, saúde=0.3, variação=0.4
+            score_bruto = (n_saldo * 0.3) + (saude_credito * 0.3) + (n_var * 0.4)
+            score_final = round(max(0.0, min(100.0, score_bruto * 100)), 2)
+
+            por_estado.append({
+                "estado":              _SIGLA_PARA_NOME.get(uf, uf),
+                "uf":                  uf,
+                "regiao":              d["regiao"],
+                "saldo":               d["saldo"],
+                "inadimplencia":       d["inadimplencia"],
+                "variacao":            d["variacao"],
+                "saldo_per_capita":    round(d["saldo"] / pop, 2),
+                "score_oportunidade":  score_final,
+            })
+
+    # ── Contar meses no período ──
+    total_meses = len(rows_serie)
+
+    # ── Formatar datas (remover hora) ──
+    data_inicio_fmt = resumo_row["data_inicio"][:10] if resumo_row["data_inicio"] else None
+    data_fim_fmt    = resumo_row["data_fim"][:10]    if resumo_row["data_fim"]    else None
+
+    # ── Montar resposta final ──
+    resultado = {
+        "filtros_aplicados": {
+            "estado": estado.upper() if estado else None,
+            "ano":    ano,
+            "mes":    mes,
+        },
+        "periodo_dados": {
+            "data_inicio": data_inicio_fmt,
+            "data_fim":    data_fim_fmt,
+            "total_meses": total_meses,
+        },
+        "resumo": {
+            "saldo_total":           resumo_row["saldo_total"],
+            "saldo_medio_por_estado": resumo_row["saldo_medio"],
+            "inadimplencia_media":   resumo_row["inad_media"],
+            "inadimplencia_min":     resumo_row["inad_min"],
+            "inadimplencia_max":     resumo_row["inad_max"],
+            "variacao_total":        resumo_row["var_total"],
+            "variacao_media":        resumo_row["var_media"],
+            "total_estados":         resumo_row["total_estados"],
+            "total_registros":       resumo_row["total_registros"],
+        },
+        "por_estado": por_estado,
+        "serie_temporal": rows_serie,
+    }
+
+    # Armazena no cache
+    _cache_relatorio[chave_cache] = (resultado, agora)
+
+    return resultado
