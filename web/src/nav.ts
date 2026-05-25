@@ -15,6 +15,7 @@ export function inicializarNav(): void {
     toggle.setAttribute("aria-label", "Abrir menu de navegação");
     overlay.hidden = true;
     document.body.classList.remove("nav-menu-open");
+    toggle.focus();
   };
 
   const abrir = (): void => {

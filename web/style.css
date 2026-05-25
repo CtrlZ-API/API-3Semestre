@@ -21,7 +21,11 @@ body.nav-menu-open {
   overflow: hidden;
 }
 
-.site-nav {
+body.nav-menu-open {
+  overflow: hidden;
+}
+
+.site-.site-nav {
   background: #2B3EE6;
   height: 60px;
   display: flex;
@@ -65,8 +69,50 @@ body.nav-menu-open {
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
+.nav-links a:focus-visible { color: #fff; background: rgba(255, 255, 255, 0.12); outline: 2px solid #fff; outline-offset: 2px; }
 .nav-links a.active { color: #fff; background: rgba(255, 255, 255, 0.15); }
 
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.nav-toggle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.nav-toggle-bar {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.nav-overlay {
+  display: none;
+  position: fixed;
+  inset: 60px 0 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: rgba(13, 17, 54, 0.45);
+  cursor: pointer;
+  z-index: 150;
+}
 .nav-toggle {
   display: none;
   flex-direction: column;
@@ -111,6 +157,7 @@ body.nav-menu-open {
 
 #app {
   max-width: 1200px;
+  width: 100%;
   width: 100%;
   margin: 0 auto;
   padding: 2rem;
@@ -402,13 +449,15 @@ button {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 1.5rem;
-  align-items: stretch; 
+  align-items: stretch;
   margin-bottom: 2rem;
+  min-width: 0;
 }
 
 /* Painel de Insight */
 #painel-insights-container {
   height: 100%;
+  min-width: 0;
 }
 
 .insight-card {
@@ -880,6 +929,209 @@ button {
   max-width: 100%;
   height: auto;
   vertical-align: top;
+
+  .cards-comparativos-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .home-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .analises-header h1,
+  .home-header h1 {
+    font-size: 1.55rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .site-nav {
+    padding: 0 16px;
+    gap: 12px;
+  }
+
+  .nav-toggle {
+    display: flex;
+  }
+
+  .nav-overlay[hidden] {
+    display: none;
+  }
+
+  .site-nav.nav-open .nav-overlay {
+    display: block;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 60px;
+    right: 0;
+    width: min(280px, 85vw);
+    height: calc(100dvh - 60px);
+    height: calc(100vh - 60px);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 1rem 0.75rem;
+    background: #2B3EE6;
+    box-shadow: -4px 0 24px rgba(13, 17, 54, 0.2);
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    z-index: 180;
+    overflow-y: auto;
+  }
+
+  .site-nav.nav-open .nav-links {
+    transform: translateX(0);
+  }
+
+  .nav-links li {
+    width: 100%;
+  }
+
+  .nav-links a {
+    display: block;
+    padding: 12px 14px;
+    font-size: 15px;
+    min-height: 44px;
+  }
+
+  .site-nav.nav-open .nav-toggle-bar:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+
+  .site-nav.nav-open .nav-toggle-bar:nth-child(2) {
+    opacity: 0;
+  }
+
+  .site-nav.nav-open .nav-toggle-bar:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+
+  #app {
+    padding: 1rem;
+  }
+
+  .loading {
+    padding: 2.5rem 1rem;
+  }
+
+  .home-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .home-header h1 {
+    font-size: 1.35rem;
+  }
+
+  .home-filtros {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .home-filtros label,
+  .home-filtros .filtro-datas {
+    width: 100%;
+  }
+
+  .home-filtros select,
+  .home-filtros input[type="date"] {
+    width: 100%;
+    margin-left: 0 !important;
+    min-height: 44px;
+  }
+
+  .home-cards {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .home-card .home-card-valor {
+    font-size: 1.25rem;
+  }
+
+  .home-ranking-section {
+    padding: 1rem;
+  }
+
+  .ranking-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .ranking-item-label {
+    flex: none;
+    width: 100%;
+  }
+
+  .ranking-item-valor {
+    max-width: none;
+    text-align: left;
+  }
+
+  .analises-header h1 {
+    font-size: 1.35rem;
+  }
+
+  .analises-filtros {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .analises-filtros > div {
+    width: 100%;
+  }
+
+  .analises-filtros select,
+  .analises-filtros input {
+    width: 100%;
+    margin-left: 0 !important;
+    min-height: 44px;
+    max-width: 100%;
+  }
+
+  .analises-filtros button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .cards-comparativos-container {
+    grid-template-columns: 1fr;
+  }
+
+  .cards-comparativos-section,
+  .ranking-section,
+  .mapa-coropletico-section {
+    padding: 1rem;
+  }
+
+  .historico-estado-section {
+    padding: 1rem;
+    margin-top: 1.25rem;
+  }
+}
+
+.historico-estado-section {
+  margin-top: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  min-width: 0;
+}
+
+.historico-estado-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.historico-chart-wrap {
+  min-height: 400px;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
 }
 
 /* Seção do mapa coroplético */
@@ -916,6 +1168,18 @@ button {
 .mapa-estados path.estado-selecionado {
   stroke: #2B3EE6 !important;
   filter: drop-shadow(0 0 2px rgba(43, 62, 230, 0.45));
+  min-width: 0;
+}
+
+.mapa-coropletico-section--grid {
+  margin-bottom: 0;
+}
+
+#mapa-coropletico-container {
+  position: relative;
+  min-height: 250px;
+  width: 100%;
+  overflow: hidden;
 }
 
 .mapa-coropletico-section h2 {
@@ -945,5 +1209,4 @@ button {
   max-width: min(200px, 90vw);
   transition: opacity 0.15s ease;
 }
-
 
