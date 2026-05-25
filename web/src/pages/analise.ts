@@ -123,10 +123,10 @@ function renderAnalises(): string {
     </div>
 
     <div class="analises-top-grid">
-      <div class="mapa-coropletico-section" style="margin-bottom: 0;">
+      <div class="mapa-coropletico-section mapa-coropletico-section--grid">
         <h2>Distribuição por Score de Oportunidade</h2>
         <p class="mapa-subtitulo">Intensidade de cor representa o score de crédito de cada estado (0 = baixo, 100 = alto).</p>
-        <div id="mapa-coropletico-container" style="position: relative; min-height: 250px;">
+        <div id="mapa-coropletico-container">
           <p class="loading">Carregando mapa...</p>
         </div>
       </div>
@@ -139,9 +139,9 @@ function renderAnalises(): string {
         ${renderEmptyState()}
       </div>
 
-      <div id="historico-estado-section" style="margin-top: 2rem; background: #fff; border-radius: 8px; padding: 1.5rem;">
-        <h2 id="historico-titulo" style="font-size: 1.1rem; margin-bottom: 1.5rem;">Evolução Histórica</h2>
-        <div id="historico-chart" style="min-height: 400px; position: relative;">
+      <div id="historico-estado-section" class="historico-estado-section">
+        <h2 id="historico-titulo">Evolução Histórica</h2>
+        <div id="historico-chart" class="historico-chart-wrap">
           <p class="loading">Carregando histórico...</p>
         </div>
       </div>
