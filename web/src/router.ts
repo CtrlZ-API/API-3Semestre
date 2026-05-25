@@ -1,6 +1,9 @@
 // rota certa 
 import { renderizarHome } from "./pages/home";
 import { renderizarAnalises } from "./pages/analise";
+import { renderizarLogin } from "./pages/login";
+import { renderizarCadastro } from "./pages/cadastro";
+import { renderizarRelatorio } from "./pages/relatorios";
 
 type HandlerFn = (container: HTMLElement, params: Record<string, string>) => Promise<void>;
 
@@ -10,30 +13,72 @@ interface Rota {
   paramNames: string[];
 }
 
+function isAutenticado(): boolean {
+  const token = localStorage.getItem("auth_token");
+  return !!token;
+}
+
 const rotas: Rota[] = [
+  {
+    pattern: /^\/login$/,
+    paramNames: [],
+    handler: async (container) => {
+      await renderizarLogin(container);
+    },
+  },
+  {
+    pattern: /^\/cadastro$/,
+    paramNames: [],
+    handler: async (container) => {
+      await renderizarCadastro(container);
+    },
+  },
   {
     pattern: /^\/?(#.*)?$/,
     paramNames: [],
     handler: async (container) => {
-      await renderizarHome(container);
+      if (!isAutenticado()) {
+        await renderizarLogin(container);
+      } else {
+        await renderizarHome(container);
+      }
     },
   },
   {
     pattern: /^\/analises$/,
     paramNames: [],
     handler: async (container) => {
-      await renderizarAnalises(container);
+      if (!isAutenticado()) {
+        await renderizarLogin(container);
+      } else {
+        await renderizarAnalises(container);
+      }
+    },
+  },
+  {
+    pattern: /^\/relatorios$/,
+    paramNames: [],
+    handler: async (container) => {
+      if (!isAutenticado()) {
+        await renderizarLogin(container);
+      } else {
+        await renderizarRelatorio(container);
+      }
     },
   },
   {
     pattern: /^\/estado\/([A-Z]{2})$/,
     paramNames: ["uf"],
     handler: async (container, params) => {
-      container.innerHTML = `
-        <a href="#/" style="display:inline-block; margin-bottom:1rem;">← Voltar</a>
-        <h1>Estado: ${params["uf"]}</h1>
-        <p style="color:#888;">Gráfico de série histórica — tarefa 3.3</p>
-      `;
+      if (!isAutenticado()) {
+        await renderizarLogin(container);
+      } else {
+        container.innerHTML = `
+          <a href="#/" style="display:inline-block; margin-bottom:1rem;">← Voltar</a>
+          <h1>Estado: ${params["uf"]}</h1>
+          <p style="color:#888;">Gráfico de série histórica — tarefa 3.3</p>
+        `;
+      }
     },
   },
 ];
@@ -74,6 +119,5 @@ async function rotear(): Promise<void> {
 
 export function inicializarRouter(): void {
   window.addEventListener("hashchange", rotear);
-
   rotear();
 }
