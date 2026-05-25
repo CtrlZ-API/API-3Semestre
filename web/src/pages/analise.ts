@@ -1,4 +1,4 @@
-import { getDadosPorEstadosPeriodo, getHistoricoGeral, getRanking } from "../api/client";
+import { getDadosPorEstadosPeriodo, getHistoricoGeral } from "../api/client";
 import { HistoricoChart } from "../components/HistoricoChart";
 import { MapaCoroplético } from "../components/MapaCoroplético";
 import type { Regiao, TipoIndicador } from "../types";
@@ -67,7 +67,7 @@ function renderEmptyState(): string {
     </div>
   `;
 }
-function renderPainelInsight(estado: string, texto: string, categoria: string, corClass: string): string {
+function renderPainelInsight(_estado: string, texto: string, categoria: string, corClass: string): string {
   const icones: Record<string, string> = {
     "alta-oportunidade": "bi-gem",
     "moderado":          "bi-cash-stack",
@@ -95,10 +95,9 @@ function renderAnalises(): string {
       <p>Score DM, cards comparativos e ranking completo</p>
     </div>
 
-    <div class="analises-filtros">
-      <div>
-        <label for="regiao-select-analises"><strong>Região:</strong></label>
-        <select id="regiao-select-analises">
+    <div class="analises-filtros" role="search" aria-label="Filtros de análise">
+      <label for="regiao-select-analises"><strong>Região:</strong>
+        <select id="regiao-select-analises" aria-label="Filtrar por região">
           <option value="">Todas</option>
           <option value="Norte">Norte</option>
           <option value="Nordeste">Nordeste</option>
@@ -106,19 +105,20 @@ function renderAnalises(): string {
           <option value="Sudeste">Sudeste</option>
           <option value="Sul">Sul</option>
         </select>
-      </div>
-      <div>
-        <label for="estado-select-analises"><strong>Estado comparativo:</strong></label>
-        <select id="estado-select-analises">
+      </label>
+      <label for="estado-select-analises"><strong>Estado comparativo:</strong>
+        <select id="estado-select-analises" aria-label="Selecionar estado para comparativo">
           <option value="">Selecione um estado</option>
         </select>
-      </div>
-      <div>
-        <label for="data-inicio-analises"><strong>De:</strong></label>
-        <input type="date" id="data-inicio-analises" />
-        <label for="data-fim-analises"><strong>Até:</strong></label>
-        <input type="date" id="data-fim-analises" />
-        <button id="btn-limpar-analises">Limpar</button>
+      </label>
+      <div class="filtro-datas">
+        <label for="data-inicio-analises"><strong>De:</strong>
+          <input type="date" id="data-inicio-analises" aria-label="Data inicial" />
+        </label>
+        <label for="data-fim-analises"><strong>Até:</strong>
+          <input type="date" id="data-fim-analises" aria-label="Data final" />
+        </label>
+        <button type="button" id="btn-limpar-analises" aria-label="Limpar filtros de data e região">Limpar</button>
       </div>
     </div>
 
@@ -406,26 +406,28 @@ function renderTabelaRanking(dadosCompletos: DadosCompletosEstado[], regiaoFiltr
     return;
   }
   
+  const estadoSelecionado = (document.getElementById("estado-select-analises") as HTMLSelectElement)?.value ?? "";
+
   container.innerHTML = `
-    <div class="tabela-ranking">
+    <div class="tabela-ranking" tabindex="0" aria-label="Ranking de estados por score. Toque em uma linha para comparar.">
       <p class="ranking-info">Score: 30% Saldo + 40% Crescimento + 30% (1 - Inadimplência). Quanto maior, melhor a oportunidade.</p>
       <table>
         <thead>
           <tr>
-            <th onclick="window.ordenarPorAnalises('posicao')">#</th>
-            <th onclick="window.ordenarPorAnalises('estado')">Estado</th>
-            <th class="align-right" onclick="window.ordenarPorAnalises('score')">Score</th>
-            <th onclick="window.ordenarPorAnalises('categoria')">Categoria</th>
-            <th class="align-right" onclick="window.ordenarPorAnalises('saldo')">Saldo</th>
-            <th class="align-right" onclick="window.ordenarPorAnalises('inadimplencia')">Inadimplência</th>
-            <th class="align-right" onclick="window.ordenarPorAnalises('variacao')">Variação</th>
-           </tr>
+            <th scope="col"><button type="button" class="th-sort-btn" data-sort="posicao" aria-label="Ordenar por posição">#</button></th>
+            <th scope="col"><button type="button" class="th-sort-btn" data-sort="estado" aria-label="Ordenar por estado">Estado</button></th>
+            <th scope="col"><button type="button" class="th-sort-btn align-right" data-sort="score" aria-label="Ordenar por score">Score</button></th>
+            <th scope="col"><button type="button" class="th-sort-btn" data-sort="categoria" aria-label="Ordenar por categoria">Categoria</button></th>
+            <th scope="col"><button type="button" class="th-sort-btn align-right" data-sort="saldo" aria-label="Ordenar por saldo">Saldo</button></th>
+            <th scope="col"><button type="button" class="th-sort-btn align-right" data-sort="inadimplencia" aria-label="Ordenar por inadimplência">Inadimplência</button></th>
+            <th scope="col"><button type="button" class="th-sort-btn align-right" data-sort="variacao" aria-label="Ordenar por variação">Variação</button></th>
+          </tr>
         </thead>
         <tbody>
           ${dadosOrdenados.map((d, i) => {
-            const isSelected = (document.getElementById("estado-select-analises") as HTMLSelectElement)?.value === d.estado;
+            const isSelected = estadoSelecionado === d.estado;
             return `
-              <tr class="${isSelected ? 'selected' : ''}" onclick="window.selecionarEstadoParaAnalise('${d.estado}')">
+              <tr class="${isSelected ? "selected" : ""}" data-estado="${d.estado}" tabindex="0" role="button" aria-label="Selecionar ${d.estado}, ${d.regiao}">
                 <td class="posicao">${i + 1}</td>
                 <td><span class="estado-nome">${d.estado}</span> <span class="regiao-nome">(${d.regiao})</span></td>
                 <td class="score-valor">${formatarScore(d.score)}</td>
@@ -437,12 +439,13 @@ function renderTabelaRanking(dadosCompletos: DadosCompletosEstado[], regiaoFiltr
             `;
           }).join("")}
         </tbody>
-
       </table>
     </div>
   `;
-  
-  (window as any).ordenarPorAnalises = (coluna: string) => {
+
+  const regiaoAtual = (document.getElementById("regiao-select-analises") as HTMLSelectElement)?.value || undefined;
+
+  const ordenarPor = (coluna: string): void => {
     if (coluna === "posicao") {
       colunaOrdenada = "score";
       ordemAscendente = false;
@@ -457,20 +460,33 @@ function renderTabelaRanking(dadosCompletos: DadosCompletosEstado[], regiaoFiltr
         ordemAscendente = false;
       }
     }
-    renderTabelaRanking(dadosCompletosCache, (document.getElementById("regiao-select-analises") as HTMLSelectElement)?.value || undefined);
+    renderTabelaRanking(dadosCompletosCache, regiaoAtual);
   };
 
-  (window as any).selecionarEstadoParaAnalise = (estado: string) => {
+  const selecionarEstado = (estado: string): void => {
     const selectEstado = document.getElementById("estado-select-analises") as HTMLSelectElement;
-    if (selectEstado) {
-      selectEstado.value = estado;
-      const { dataInicio, dataFim, regiao } = lerFiltros();
-      renderCardsComparativos(estado, dataInicio, dataFim, regiao);
-      renderGraficoHistoricoAnalises(regiao, dataInicio, dataFim, estado);
-      renderTabelaRanking(dadosCompletosCache, regiao); // Re-render table to update selection highlight
-    }
+    if (!selectEstado) return;
+    selectEstado.value = estado;
+    const { dataInicio, dataFim, regiao } = lerFiltros();
+    renderCardsComparativos(estado, dataInicio, dataFim, regiao);
+    renderGraficoHistoricoAnalises(regiao, dataInicio, dataFim, estado);
+    renderTabelaRanking(dadosCompletosCache, regiao);
   };
 
+  container.querySelectorAll<HTMLButtonElement>(".th-sort-btn").forEach((btn) => {
+    btn.addEventListener("click", () => ordenarPor(btn.dataset.sort ?? "score"));
+  });
+
+  container.querySelectorAll<HTMLTableRowElement>("tr[data-estado]").forEach((row) => {
+    const uf = row.dataset.estado!;
+    row.addEventListener("click", () => selecionarEstado(uf));
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        selecionarEstado(uf);
+      }
+    });
+  });
 }
 
 
@@ -492,17 +508,6 @@ async function carregarTudo(dataInicio?: string, dataFim?: string, regiaoFiltro?
   if (container) container.innerHTML = `<p class="loading">Carregando ranking</p>`;
   if (cardsContainer) cardsContainer.innerHTML = `<p class="loading">Escolha um estado</p>`;
   
-  // Extrai ano e mês do filtro de data_inicio existente
-  let anoMapa: number | undefined;
-  let mesMapa: number | undefined;
-  if (dataInicio) {
-    const partes = dataInicio.split("-");
-    if (partes.length >= 2) {
-      anoMapa = Number(partes[0]);
-      mesMapa = Number(partes[1]);
-    }
-  }
-
   try {
     const rankingData = await getRankingOportunidade();
 

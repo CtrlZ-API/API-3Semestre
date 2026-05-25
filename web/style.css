@@ -1,4 +1,4 @@
-*, *::before, *::after {
+﻿*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -204,20 +204,25 @@ button {
   margin-bottom: 1.5rem;
 }
 
-.analises-filtros select,
-.analises-filtros input {
-  padding: 0.25rem 0.5rem;
-  margin-left: 0.5rem;
+.analises-filtros label {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
-.analises-filtros button {
-  padding: 0.25rem 0.75rem;
-  background: transparent;
-  color: #666;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
+.analises-filtros select,
+.analises-filtros input[type="date"] {
+  padding: 0.35rem 0.5rem;
+  margin-left: 0;
+  max-width: 100%;
+}
+
+.analises-filtros .filtro-datas {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .cards-comparativos-section {
@@ -308,6 +313,10 @@ button {
 
 .tabela-ranking {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
 }
 
 .tabela-ranking table {
@@ -317,11 +326,46 @@ button {
 }
 
 .tabela-ranking th {
-  padding: 0.75rem;
+  padding: 0;
   background: #f5f5f5;
   border-bottom: 2px solid #e0e0e0;
   text-align: left;
+  vertical-align: middle;
+}
+
+.th-sort-btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
   cursor: pointer;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.th-sort-btn.align-right {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.th-sort-btn:hover {
+  background: rgba(43, 62, 230, 0.06);
+}
+
+.th-sort-btn:focus-visible {
+  outline: 2px solid #2B3EE6;
+  outline-offset: -2px;
+}
+
+.th-sort-btn:active {
+  background: rgba(43, 62, 230, 0.12);
 }
 
 .tabela-ranking th.align-right {
@@ -415,12 +459,24 @@ button {
 /* Interatividade da Tabela */
 .tabela-ranking tbody tr {
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease;
+  touch-action: manipulation;
 }
 
-.tabela-ranking tbody tr:hover {
-  background: #f0f3ff;
-  transform: translateX(4px);
+.tabela-ranking tbody tr[data-estado] {
+  min-height: 44px;
+}
+
+@media (hover: hover) {
+  .tabela-ranking tbody tr:hover {
+    background: #f0f3ff;
+  }
+}
+
+.tabela-ranking tbody tr:active,
+.tabela-ranking tbody tr:focus-visible {
+  background: #e8ecff;
+  outline: none;
 }
 
 .tabela-ranking tbody tr.selected {
@@ -1135,7 +1191,7 @@ button {
   overflow: hidden;
 }
 
-/* Seção do mapa coroplético */
+/* SeÃ§Ã£o do mapa coroplÃ©tico */
 .mapa-coropletico-section {
   background: #fff;
   border-radius: 8px;
@@ -1211,12 +1267,156 @@ button {
   transition: opacity 0.15s ease;
 }
 
+/* â€”â€” Layout auth (login / cadastro) â€”â€” */
+body.pagina-auth .site-nav {
+  display: none;
+}
 
+#app.pagina-full {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+
+.login-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+}
+
+.login-logo {
+  background: #2B3EE6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.5rem, 5vw, 3rem);
+}
+
+.login-logo svg {
+  width: min(200px, 28vw);
+  height: auto;
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  background: #fff;
+  border-radius: 24px;
+  margin: clamp(1rem, 4vw, 2rem);
+  max-width: 420px;
+  width: calc(100% - 2rem);
+  justify-self: center;
+  align-self: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+.login-card h2 {
+  font-size: clamp(1.35rem, 4vw, 1.8rem);
+  color: #333;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.login-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.login-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #444;
+}
+
+.login-card input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.login-card input:focus-visible {
+  outline: 2px solid #2B3EE6;
+  outline-offset: 1px;
+  border-color: #2B3EE6;
+}
+
+.login-card #btn-login,
+.login-card #btn-cadastrar {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0.5rem;
+  padding: 0.875rem 1rem;
+  background: #2B3EE6;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.login-card #btn-login:hover,
+.login-card #btn-cadastrar:hover {
+  background: #2434c4;
+}
+
+.login-card #btn-login:active,
+.login-card #btn-cadastrar:active {
+  background: #1a2899;
+}
+
+.login-card #btn-login:focus-visible,
+.login-card #btn-cadastrar:focus-visible {
+  outline: 2px solid #2B3EE6;
+  outline-offset: 2px;
+}
+
+.cadastro-link {
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.cadastro-link a {
+  color: #2B3EE6;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 0.5rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cadastro-link a:hover {
+  text-decoration: underline;
+}
+
+.cadastro-link a:focus-visible {
+  outline: 2px solid #2B3EE6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* â€”â€” RelatÃ³rios â€”â€” */
 .relatorio-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-  padding-bottom: 400px;
+  width: 100%;
+  min-width: 0;
+  padding-bottom: 2rem;
 }
 
 .relatorio-header {
@@ -1224,23 +1424,23 @@ button {
 }
 
 .relatorio-header h1 {
-  font-size: 1.8rem;
+  font-size: clamp(1.35rem, 4vw, 1.8rem);
+  line-height: 1.2;
   margin-top: 0;
-  margin-bottom: 0.25rem;
   color: #333;
 }
 
 .relatorio-header p {
   color: #666;
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
 }
 
 .relatorio-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
+  background: #fff;
+  border-radius: 12px;
+  padding: clamp(1rem, 3vw, 1.75rem);
   border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .relatorio-row {
@@ -1253,123 +1453,118 @@ button {
 .relatorio-field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  position: relative;
-  z-index: 1;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .relatorio-field label {
+  font-size: 0.85rem;
   font-weight: 600;
   color: #555;
-  font-size: 0.9rem;
-  margin-bottom: 0.25rem;
 }
 
-.relatorio-field select {
-  width: 100%;
-  padding: 0.25rem 0.5rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
-  background: white;
-  position: relative;
-  z-index: 1;
-}
-
-.relatorio-field select:focus {
-  outline: none;
-  border-color: #2B3EE6;
-}
-
+.relatorio-field select,
 .relatorio-input {
   width: 100%;
-  padding: 0.25rem 0.5rem;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
-  background: white;
-}
-
-.relatorio-input:focus {
-  outline: none;
-  border-color: #2B3EE6;
-}
-
-body:has(.relatorio-container) #app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-  width: 100%;
-}
-
-.relatorio-container {
+  font-size: 16px;
+  font-family: inherit;
   max-width: 100%;
-  margin: 0;
-  padding: 0;
-  padding-bottom: 400px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.relatorio-field select:focus-visible,
+.relatorio-input:focus-visible {
+  outline: 2px solid #2B3EE6;
+  outline-offset: 1px;
+  border-color: #2B3EE6;
 }
 
 .formato-group {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
+  border: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
 }
 
-.formato-group label {
+.formato-group legend {
   font-weight: 600;
-  color: #555;
-  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  color: #444;
+  padding: 0;
 }
 
 .formato-buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .formato-btn {
-  padding: 0.5rem 1.25rem;
-  background: #f5f5f5;
+  flex: 1;
+  min-width: 120px;
+  min-height: 44px;
+  padding: 0.6rem 1.25rem;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
+  background: #f5f5f5;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #555;
   cursor: pointer;
-  transition: all 0.2s;
   text-align: center;
+  touch-action: manipulation;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.formato-btn:hover {
+  border-color: #2B3EE6;
+  color: #2B3EE6;
+  background: #fff;
+}
+
+.formato-btn:focus-visible {
+  outline: 2px solid #2B3EE6;
+  outline-offset: 2px;
+}
+
+.formato-btn:active {
+  background: #f0f3ff;
 }
 
 .formato-btn.ativo {
-  background: #2B3EE6;
   border-color: #2B3EE6;
-  color: white;
-}
-
-.formato-btn:not(.ativo):hover {
-  background: #e8e8e8;
-  border-color: #ccc;
+  background: #2B3EE6;
+  color: #fff;
 }
 
 .btn-exportar {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-  color: white;
-  border: none;
-  padding: 0.875rem 2rem;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
+  width: 100%;
+  min-height: 48px;
   margin-top: 0.5rem;
-  transition: opacity 0.2s;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity 0.2s ease;
 }
 
-.btn-exportar:hover {
-  opacity: 0.9;
+.btn-exportar:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.btn-exportar:focus-visible {
+  outline: 2px solid #2B3EE6;
+  outline-offset: 2px;
 }
 
 .btn-exportar:disabled {
@@ -1379,153 +1574,259 @@ body:has(.relatorio-container) #app {
 
 .relatorio-feedback {
   margin-top: 1rem;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   border-radius: 8px;
-  text-align: center;
+  font-size: 0.9rem;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.relatorio-feedback:empty {
   display: none;
 }
 
 .relatorio-feedback.sucesso {
-  display: block;
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: #ecfdf5;
+  color: #166534;
+  border: 1px solid #bbf7d0;
 }
 
 .relatorio-feedback.erro {
-  display: block;
-  background: #fee;
-  color: #c62828;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
 }
 
 .relatorio-feedback.loading {
-  display: block;
-  background: #f0f0f0;
-  color: #333;
-}
-
-@media (max-width: 768px) {
-  .relatorio-row {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  
-  .formato-group {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-.login-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  min-height: 100vh;
-  background: #2B3EE6;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 2rem;
-  padding: 2rem 12rem;
-  z-index: 9999;
-}
-
-body:has(.login-container) nav {
-  display: none;
-}
-
-body:has(.login-container) #app {
-  max-width: 100%;
-  padding: 0;
-  margin: 0;
-}
-
-.login-logo {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.login-logo svg {
-  width: 200px;
-  height: auto;
-}
-
-.login-card {
-  flex: 0.8;
-  background: white;
-  border-radius: 24px;
-  padding: 2rem;
-  max-width: 420px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-}
-
-.login-card h2 {
-  font-size: 1.8rem;
-  color: #333;
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.login-card input {
-  width: 100%;
-  padding: 0.875rem 1rem;
-  margin-bottom: 1.25rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
-}
-
-.login-card input:focus {
-  outline: none;
-  border-color: #2B3EE6;
-}
-
-.login-card button {
-  width: 100%;
-  padding: 0.875rem;
-  background: #2B3EE6;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 0.5rem;
-}
-
-.login-card .cadastro-link {
-  text-align: center;
-  margin-top: 1.5rem;
-}
-
-.login-card .cadastro-link a {
+  background: #f0f3ff;
   color: #2B3EE6;
-  text-decoration: none;
-  font-size: 0.9rem;
+  border: 1px solid #c7d2fe;
 }
 
-.login-card .cadastro-link a:hover {
-  text-decoration: underline;
+.acesso-restrito {
+  text-align: center;
+  padding: clamp(2rem, 8vw, 4rem) 1rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.acesso-restrito h2 {
+  margin-bottom: 0.75rem;
+}
+
+.acesso-restrito a {
+  color: #2B3EE6;
+  font-weight: 600;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.pagina-erro {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.link-voltar,
+.btn-secundario {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  color: #2B3EE6;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.texto-secundario {
+  color: #888;
+}
+
+/* â€”â€” Touch e controles globais â€”â€” */
+button,
+select,
+input[type="date"],
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+a.btn-secundario {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-filtros select,
+.home-filtros input[type="date"],
+.analises-filtros select,
+.analises-filtros input[type="date"],
+.analises-filtros #btn-limpar-analises,
+.home-filtros #btn-limpar,
+#btn-toggle-ranking {
+  min-height: 44px;
+  font-size: 16px;
+}
+
+.analises-filtros #btn-limpar-analises,
+.home-filtros #btn-limpar {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: #666;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.analises-filtros #btn-limpar-analises:focus-visible,
+.home-filtros #btn-limpar:focus-visible,
+#btn-toggle-ranking:focus-visible {
+  outline: 2px solid #2B3EE6;
+  outline-offset: 2px;
+}
+
+.analises-filtros #btn-limpar-analises:active,
+.home-filtros #btn-limpar:active,
+#btn-toggle-ranking:active {
+  background: #f0f0f0;
+}
+
+.card-comparativo {
+  min-width: 0;
+  touch-action: manipulation;
+}
+
+.categoria-badge {
+  display: inline-block;
+  min-height: 28px;
+  line-height: 1.4;
+  padding: 0.35rem 0.6rem;
+}
+
+.historico-chart-wrap {
+  min-height: clamp(280px, 55vw, 400px);
+}
+
+#mapa-coropletico-container {
+  min-height: clamp(200px, 50vw, 320px);
+  touch-action: pan-y;
+}
+
+#mapa-coropletico-container svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.mapa-estados path {
+  touch-action: manipulation;
+}
+
+.mapa-estados path.estado-selecionado {
+  stroke: #2B3EE6 !important;
+  filter: drop-shadow(0 0 2px rgba(43, 62, 230, 0.45));
+}
+
+.historico-chart-wrap svg {
+  max-width: 100%;
+  height: auto;
+  vertical-align: top;
+}
+
+@media (min-width: 769px) {
+  .site-nav .nav-links {
+    position: static;
+    display: flex;
+    flex-direction: row;
+    width: auto;
+    height: auto;
+    transform: none;
+    padding: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .nav-toggle,
+  .nav-overlay {
+    display: none !important;
+  }
+
+  .login-container {
+    padding: 0 4rem;
+    align-items: center;
+  }
+
+  .login-card {
+    margin: 2rem;
+    width: 100%;
+  }
+}
+
+@media (max-width: 1024px) {
+  .relatorio-row {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 768px) {
   .login-container {
-    justify-content: center;
-    flex-direction: column;
-    padding: 2rem;
-    gap: 2rem;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    padding: 0;
   }
-  
-  .login-logo svg {
-    width: 120px;
+
+  .login-logo {
+    min-height: 140px;
+    padding: 1.5rem;
   }
-  
+
   .login-card {
-    max-width: 100%;
-    width: 100%;
+    margin: 1rem;
+    max-width: none;
+    width: calc(100% - 2rem);
+    border-radius: 16px;
+  }
+
+  .relatorio-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .formato-buttons {
+    flex-direction: column;
+  }
+
+  .formato-btn {
+    min-width: 100%;
+  }
+
+  .historico-chart-wrap {
+    min-height: 280px;
+  }
+
+  #mapa-coropletico-container {
+    min-height: 200px;
+  }
+
+  .tabela-ranking table {
+    font-size: 0.8rem;
+  }
+
+  .tabela-ranking td,
+  .th-sort-btn {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-logo {
+    min-height: 110px;
+  }
+
+  .login-logo svg {
+    width: 72px;
   }
 }
