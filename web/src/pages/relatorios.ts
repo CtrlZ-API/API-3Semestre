@@ -37,7 +37,7 @@ function renderRelatorio(): string {
     <option value="12">Dezembro</option>
   `;
 
-  const anoAtual = 2026;
+  const anoAtual = new Date().getFullYear();
   const anoMinimo = 2004;
 
   return `
@@ -49,39 +49,39 @@ function renderRelatorio(): string {
 
       <div class="relatorio-card">
         <form id="relatorio-form">
-          <div class="formato-group">
-            <label>Selecione a opção:</label>
-            <div class="formato-buttons">
-              <div class="formato-btn ${formatoSelecionado === "pdf" ? "ativo" : ""}" data-formato="pdf">
+          <fieldset class="formato-group">
+            <legend>Selecione o formato</legend>
+            <div class="formato-buttons" role="group" aria-label="Formato do relatório">
+              <button type="button" class="formato-btn ${formatoSelecionado === "pdf" ? "ativo" : ""}" data-formato="pdf" aria-pressed="${formatoSelecionado === "pdf"}">
                 PDF
-              </div>
-              <div class="formato-btn ${formatoSelecionado === "excel" ? "ativo" : ""}" data-formato="excel">
+              </button>
+              <button type="button" class="formato-btn ${formatoSelecionado === "excel" ? "ativo" : ""}" data-formato="excel" aria-pressed="${formatoSelecionado === "excel"}">
                 Excel
-              </div>
+              </button>
+            </div>
+          </fieldset>
+
+          <div class="relatorio-row">
+            <div class="relatorio-field">
+              <label for="ano-inicio">Ano Início</label>
+              <input type="number" id="ano-inicio" min="${anoMinimo}" max="${anoAtual}" value="${anoAtual - 1}" step="1" class="relatorio-input" inputmode="numeric" />
+            </div>
+            <div class="relatorio-field">
+              <label for="ano-fim">Ano Fim</label>
+              <input type="number" id="ano-fim" min="${anoMinimo}" max="${anoAtual}" value="${anoAtual}" step="1" class="relatorio-input" inputmode="numeric" />
             </div>
           </div>
 
           <div class="relatorio-row">
             <div class="relatorio-field">
-              <label>Ano Início</label>
-              <input type="number" id="ano-inicio" min="${anoMinimo}" max="${anoAtual}" value="${anoAtual - 1}" step="1" class="relatorio-input" />
-            </div>
-            <div class="relatorio-field">
-              <label>Ano Fim</label>
-              <input type="number" id="ano-fim" min="${anoMinimo}" max="${anoAtual}" value="${anoAtual}" step="1" class="relatorio-input" />
-            </div>
-          </div>
-
-          <div class="relatorio-row">
-            <div class="relatorio-field">
-              <label>Mês Início</label>
-              <select id="mes-inicio">
+              <label for="mes-inicio">Mês Início</label>
+              <select id="mes-inicio" aria-label="Mês inicial">
                 ${mesesOptions}
               </select>
             </div>
             <div class="relatorio-field">
-              <label>Mês Fim</label>
-              <select id="mes-fim">
+              <label for="mes-fim">Mês Fim</label>
+              <select id="mes-fim" aria-label="Mês final">
                 ${mesesOptions}
               </select>
             </div>
@@ -89,25 +89,25 @@ function renderRelatorio(): string {
 
           <div class="relatorio-row">
             <div class="relatorio-field">
-              <label>Região</label>
-              <select id="regiao">
+              <label for="regiao">Região</label>
+              <select id="regiao" aria-label="Filtrar por região">
                 ${regioesOptions}
               </select>
             </div>
             <div class="relatorio-field">
-              <label>Estado</label>
-              <select id="estado">
+              <label for="estado">Estado</label>
+              <select id="estado" aria-label="Filtrar por estado">
                 <option value="">Todos os estados</option>
               </select>
             </div>
           </div>
 
-          <button type="submit" id="btn-exportar" class="btn-exportar">
+          <button type="submit" id="btn-exportar" class="btn-exportar" aria-describedby="feedback">
             Exportar relatório
           </button>
         </form>
 
-        <div id="feedback" class="relatorio-feedback"></div>
+        <div id="feedback" class="relatorio-feedback" role="status" aria-live="polite"></div>
       </div>
     </div>
   `;
@@ -158,9 +158,9 @@ export async function renderizarRelatorio(container: HTMLElement): Promise<void>
   const token = localStorage.getItem("auth_token");
   if (!token) {
     container.innerHTML = `
-      <div style="text-align: center; padding: 2rem;">
+      <div class="acesso-restrito">
         <h2>Acesso restrito</h2>
-        <p>Faça <a href="#/login" style="color: #2B3EE6;">login</a> para acessar.</p>
+        <p>Faça <a href="#/login">login</a> para acessar os relatórios.</p>
       </div>
     `;
     return;
@@ -171,12 +171,16 @@ export async function renderizarRelatorio(container: HTMLElement): Promise<void>
   // Inicializar estados com base na região padrão (Todas)
   atualizarEstados("");
 
-  const formatoBtns = document.querySelectorAll(".formato-btn");
-  formatoBtns.forEach(btn => {
+  const formatoBtns = document.querySelectorAll<HTMLButtonElement>(".formato-btn");
+  formatoBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
-      formatoBtns.forEach(b => b.classList.remove("ativo"));
+      formatoBtns.forEach((b) => {
+        b.classList.remove("ativo");
+        b.setAttribute("aria-pressed", "false");
+      });
       btn.classList.add("ativo");
-      formatoSelecionado = btn.getAttribute("data-formato") as "pdf" | "excel";
+      btn.setAttribute("aria-pressed", "true");
+      formatoSelecionado = btn.dataset.formato as "pdf" | "excel";
     });
   });
 
@@ -217,7 +221,7 @@ export async function renderizarRelatorio(container: HTMLElement): Promise<void>
     if (!btn) return;
     
     btn.disabled = true;
-    btn.style.opacity = "0.6";
+    btn.setAttribute("aria-busy", "true");
     mostrarFeedback("Gerando relatório...", "loading");
 
     try {
@@ -245,11 +249,12 @@ export async function renderizarRelatorio(container: HTMLElement): Promise<void>
       downloadBlob(blob, `relatorio_credito_${anoInicio}_${mesInicio}_a_${anoFim}_${mesFim}.${extensao}`);
       mostrarFeedback("Relatório gerado com sucesso!", "sucesso");
 
-    } catch (err: any) {
-      mostrarFeedback(err.message || "Erro ao gerar relatório", "erro");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao gerar relatório";
+      mostrarFeedback(msg, "erro");
     } finally {
       btn.disabled = false;
-      btn.style.opacity = "1";
+      btn.removeAttribute("aria-busy");
     }
   });
 }

@@ -28,6 +28,7 @@ export class MapaCoroplético {
   // Dados e região filtrada atuais
   private dadosAtuais: ItemRanking[] = [];
   private regiaoAtiva: string | undefined;
+  private onEstadoClick?: (uf: string) => void;
 
   // Mapeamento UF → região (para o filtro de opacidade)
   private static readonly UF_PARA_REGIAO: Record<string, string> = {
@@ -77,9 +78,14 @@ export class MapaCoroplético {
   }
 
   /** Renderiza ou re-renderiza o mapa com novos dados e/ou filtro de região. */
-  public async render(dados: ItemRanking[], regiaoFiltro?: string): Promise<void> {
+  public async render(
+    dados: ItemRanking[],
+    regiaoFiltro?: string,
+    onEstadoClick?: (uf: string) => void
+  ): Promise<void> {
     this.dadosAtuais = dados;
     this.regiaoAtiva = regiaoFiltro || undefined;
+    this.onEstadoClick = onEstadoClick;
 
     if (!this.geoCache) {
       this.mapaG.selectAll("*").remove();
@@ -162,9 +168,23 @@ export class MapaCoroplético {
         return regiaoEstado === this.regiaoAtiva ? 1 : 0.22;
       })
       .style("cursor", "pointer")
+      .style("touch-action", "manipulation")
       .style("transition", "opacity 0.3s ease, fill 0.3s ease")
-      .on("mousemove", (evento, feat) => this.mostrarTooltip(evento, feat, scoresPorUF))
-      .on("mouseleave", () => this.esconderTooltip());
+      .on("pointerenter", (evento, feat) => {
+        if (evento.pointerType === "mouse") this.mostrarTooltip(evento, feat, scoresPorUF);
+      })
+      .on("pointermove", (evento, feat) => {
+        if (evento.pointerType === "mouse" || evento.pressure > 0) {
+          this.mostrarTooltip(evento, feat, scoresPorUF);
+        }
+      })
+      .on("pointerleave", (evento) => {
+        if (evento.pointerType === "mouse") this.esconderTooltip();
+      })
+      .on("click", (_evento, feat) => {
+        const uf = this.resolverUF(feat);
+        if (uf) this.onEstadoClick?.(uf);
+      });
 
     this.desenharLegenda(largura, alturaGeo, escalaCor);
   }
@@ -185,7 +205,7 @@ export class MapaCoroplético {
 
   /** Exibe o tooltip com nome, UF e score. */
   private mostrarTooltip(
-    evento: MouseEvent,
+    evento: PointerEvent,
     feat: GeoJSON.Feature,
     scoresPorUF: Map<string, ItemRanking>
   ): void {
