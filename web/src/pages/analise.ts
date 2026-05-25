@@ -541,7 +541,7 @@ async function carregarTudo(dataInicio?: string, dataFim?: string, regiaoFiltro?
       await mapaCoroplético.render(dadosRankingMapa, regiaoFiltro, (uf) => {
         const select = document.getElementById("estado-select-analises") as HTMLSelectElement | null;
         if (!select) return;
-        const existe = Array.from(select.options).some((o) => o.value === uf);
+        const existe = Array.from(select.options).some(o => o.value === uf);
         if (existe) {
           select.value = uf;
           select.dispatchEvent(new Event("change"));

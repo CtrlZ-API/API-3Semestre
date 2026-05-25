@@ -1,7 +1,6 @@
 import * as d3 from "d3";
 import type { ItemRanking } from "../types";
 
-// URL pública do GeoJSON de estados brasileiros (IBGE via raw.githubusercontent)
 const GEOJSON_URL =
   "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson";
 
@@ -11,7 +10,6 @@ export interface OpcoesMapaCoroplético {
 
 /**
  * MapaCoroplético — mapa do Brasil colorido por score de oportunidade (0-100).
- * Mesmo padrão de classe de HistoricoChart: instancie, chame render(), destrua com destroy().
  */
 export class MapaCoroplético {
   private container: HTMLElement;
@@ -21,16 +19,14 @@ export class MapaCoroplético {
   private legendaG: d3.Selection<SVGGElement, unknown, null, undefined>;
   private tooltip: HTMLDivElement;
   private resizeObserver: ResizeObserver;
+  private resizeRaf: number | null = null;
 
-  // GeoJSON em cache (carregado uma única vez)
   private geoCache: GeoJSON.FeatureCollection | null = null;
-
-  // Dados e região filtrada atuais
   private dadosAtuais: ItemRanking[] = [];
   private regiaoAtiva: string | undefined;
   private onEstadoClick?: (uf: string) => void;
+  private ufSelecionada: string | null = null;
 
-  // Mapeamento UF → região (para o filtro de opacidade)
   private static readonly UF_PARA_REGIAO: Record<string, string> = {
     AC: "Norte", AM: "Norte", AP: "Norte", PA: "Norte", RO: "Norte", RR: "Norte", TO: "Norte",
     AL: "Nordeste", BA: "Nordeste", CE: "Nordeste", MA: "Nordeste", PB: "Nordeste",
@@ -40,7 +36,6 @@ export class MapaCoroplético {
     PR: "Sul", RS: "Sul", SC: "Sul",
   };
 
-  // Mapeamento nome do GeoJSON → sigla UF
   private static readonly NOME_GEOJSON_PARA_UF: Record<string, string> = {
     "Acre": "AC", "Alagoas": "AL", "Amapá": "AP", "Amazonas": "AM",
     "Bahia": "BA", "Ceará": "CE", "Distrito Federal": "DF", "Espírito Santo": "ES",
@@ -56,28 +51,44 @@ export class MapaCoroplético {
     if (!el) throw new Error(`Container #${opcoes.containerId} não encontrado.`);
     this.container = el;
 
-    // SVG principal
     this.svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this.svgEl.style.width = "100%";
+    this.svgEl.style.height = "auto";
     this.svgEl.style.display = "block";
+    this.svgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    this.svgEl.setAttribute("role", "img");
+    this.svgEl.setAttribute("aria-label", "Mapa do Brasil por score de oportunidade de crédito");
     this.container.appendChild(this.svgEl);
 
     this.svg = d3.select(this.svgEl);
-    this.mapaG   = this.svg.append("g").attr("class", "mapa-estados");
+    this.mapaG = this.svg.append("g").attr("class", "mapa-estados");
     this.legendaG = this.svg.append("g").attr("class", "mapa-legenda-g");
 
-    // Tooltip HTML (flutuante)
     this.tooltip = document.createElement("div");
     this.tooltip.className = "mapa-tooltip";
+    this.tooltip.setAttribute("role", "status");
+    this.tooltip.setAttribute("aria-live", "polite");
     this.tooltip.style.display = "none";
     this.container.appendChild(this.tooltip);
 
-    // Responsividade
-    this.resizeObserver = new ResizeObserver(() => this.desenhar());
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.resizeRaf !== null) cancelAnimationFrame(this.resizeRaf);
+      this.resizeRaf = requestAnimationFrame(() => {
+        this.resizeRaf = null;
+        this.desenhar();
+      });
+    });
     this.resizeObserver.observe(this.container);
+
+    this.container.addEventListener("pointerdown", (e) => {
+      if (e.target === this.container || e.target === this.svgEl) {
+        this.ufSelecionada = null;
+        this.atualizarDestaqueEstados();
+        this.esconderTooltip();
+      }
+    });
   }
 
-  /** Renderiza ou re-renderiza o mapa com novos dados e/ou filtro de região. */
   public async render(
     dados: ItemRanking[],
     regiaoFiltro?: string,
@@ -89,12 +100,16 @@ export class MapaCoroplético {
 
     if (!this.geoCache) {
       this.mapaG.selectAll("*").remove();
+      const largura = Math.max(1, this.container.clientWidth);
+      this.svg.attr("viewBox", `0 0 ${largura} 200`);
       this.mapaG.append("text")
         .attr("class", "loading-geo")
-        .attr("x", "50%").attr("y", "50%")
+        .attr("x", largura / 2)
+        .attr("y", 100)
         .attr("text-anchor", "middle")
         .attr("dominant-baseline", "middle")
-        .style("fill", "#888").style("font-size", "13px")
+        .style("fill", "#888")
+        .style("font-size", "13px")
         .text("Carregando geometria dos estados...");
 
       try {
@@ -105,9 +120,12 @@ export class MapaCoroplético {
         this.mapaG.selectAll("*").remove();
         this.mapaG.append("text")
           .attr("class", "loading-geo")
-          .attr("x", "50%").attr("y", "50%")
-          .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
-          .style("fill", "#c00").style("font-size", "13px")
+          .attr("x", largura / 2)
+          .attr("y", 100)
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "middle")
+          .style("fill", "#c00")
+          .style("font-size", "13px")
           .text("Não foi possível carregar o mapa geográfico.");
         return;
       }
@@ -116,50 +134,61 @@ export class MapaCoroplético {
     this.desenhar();
   }
 
-  /** Redesenha o mapa (chamado em render() e no resize). */
+  private obterDimensoes(): { largura: number; alturaGeo: number; alturaLegenda: number; altura: number } {
+    const rect = this.container.getBoundingClientRect();
+    const largura = Math.max(1, rect.width || this.container.clientWidth || 320);
+    const aspectRatio = largura < 400 ? 0.72 : largura < 768 ? 0.58 : 0.45;
+    const alturaGeo = Math.min(largura < 400 ? 200 : 320, Math.max(160, largura * aspectRatio));
+    const alturaLegenda = largura < 400 ? 44 : 52;
+    return { largura, alturaGeo, alturaLegenda, altura: alturaGeo + alturaLegenda };
+  }
+
   private desenhar(): void {
     if (!this.geoCache || this.dadosAtuais.length === 0) return;
 
     this.mapaG.selectAll("text.loading-geo").remove();
 
-    const largura  = this.container.clientWidth  || 600;
-    const alturaGeo = Math.min(300, Math.max(220, largura * 0.45));
-    const alturaLegenda = 52;
-    const altura   = alturaGeo + alturaLegenda;
+    const { largura, alturaGeo, altura } = this.obterDimensoes();
 
-    this.svg.attr("viewBox", `0 0 ${largura} ${altura}`)
-            .attr("height", altura);
+    this.svg
+      .attr("viewBox", `0 0 ${largura} ${altura}`)
+      .attr("width", "100%")
+      .attr("height", altura);
 
-    // Projeção Mercator ajustada ao container
-    const projecao = d3.geoMercator().fitSize([largura, alturaGeo], this.geoCache);
+    const padding = largura < 400 ? 4 : 8;
+    const projecao = d3.geoMercator().fitExtent(
+      [[padding, padding], [largura - padding, alturaGeo - padding]],
+      this.geoCache
+    );
     const caminhoGeo = d3.geoPath().projection(projecao);
 
-    // Escala de cores sequencial (0=cinza claro → 100=azul escuro)
     const escalaCor = d3.scaleSequential(d3.interpolateBlues).domain([0, 100]);
-
-    // Índice UF → score para lookup rápido
     const scoresPorUF = new Map<string, ItemRanking>(
       this.dadosAtuais.map(d => [d.uf, d])
     );
 
-    // Desenha estados
-    this.mapaG.selectAll<SVGPathElement, GeoJSON.Feature>("path")
+    const paths = this.mapaG.selectAll<SVGPathElement, GeoJSON.Feature>("path")
       .data(this.geoCache.features, (d: GeoJSON.Feature) =>
         (d.properties?.sigla || d.properties?.name || "") as string
       )
       .join(
         enter => enter.append("path"),
         update => update,
-        exit   => exit.remove()
-      )
-      .attr("d", caminhoGeo as any)
+        exit => exit.remove()
+      );
+
+    paths
+      .attr("d", caminhoGeo as d3.ValueFn<SVGPathElement, GeoJSON.Feature, string | null>)
       .attr("fill", (feat) => {
         const uf = this.resolverUF(feat);
         const item = uf ? scoresPorUF.get(uf) : undefined;
         return item ? escalaCor(item.score) : "#e0e0e0";
       })
       .attr("stroke", "#ffffff")
-      .attr("stroke-width", 0.8)
+      .attr("stroke-width", (feat) => {
+        const uf = this.resolverUF(feat);
+        return uf && uf === this.ufSelecionada ? 2.2 : 0.8;
+      })
       .attr("opacity", (feat) => {
         if (!this.regiaoAtiva) return 1;
         const uf = this.resolverUF(feat);
@@ -167,11 +196,17 @@ export class MapaCoroplético {
         const regiaoEstado = MapaCoroplético.UF_PARA_REGIAO[uf];
         return regiaoEstado === this.regiaoAtiva ? 1 : 0.22;
       })
+      .attr("class", (feat) => {
+        const uf = this.resolverUF(feat);
+        return uf && uf === this.ufSelecionada ? "estado-selecionado" : "";
+      })
       .style("cursor", "pointer")
       .style("touch-action", "manipulation")
-      .style("transition", "opacity 0.3s ease, fill 0.3s ease")
+      .style("transition", "opacity 0.3s ease, fill 0.3s ease, stroke-width 0.15s ease")
       .on("pointerenter", (evento, feat) => {
-        if (evento.pointerType === "mouse") this.mostrarTooltip(evento, feat, scoresPorUF);
+        if (evento.pointerType === "mouse") {
+          this.mostrarTooltip(evento, feat, scoresPorUF);
+        }
       })
       .on("pointermove", (evento, feat) => {
         if (evento.pointerType === "mouse" || evento.pressure > 0) {
@@ -179,42 +214,74 @@ export class MapaCoroplético {
         }
       })
       .on("pointerleave", (evento) => {
-        if (evento.pointerType === "mouse") this.esconderTooltip();
+        if (evento.pointerType === "mouse") {
+          this.esconderTooltip();
+        }
       })
-      .on("click", (_evento, feat) => {
+      .on("pointerdown", (evento, feat) => {
+        (evento.currentTarget as SVGPathElement).setPointerCapture(evento.pointerId);
+        this.mostrarTooltip(evento, feat, scoresPorUF);
+      })
+      .on("pointerup", (evento, feat) => {
+        (evento.currentTarget as SVGPathElement).releasePointerCapture(evento.pointerId);
         const uf = this.resolverUF(feat);
-        if (uf) this.onEstadoClick?.(uf);
+        if (uf) {
+          this.ufSelecionada = uf;
+          this.atualizarDestaqueEstados();
+          this.onEstadoClick?.(uf);
+        }
+        if (evento.pointerType !== "mouse") {
+          this.mostrarTooltip(evento, feat, scoresPorUF);
+        }
+      })
+      .on("click", (evento, feat) => {
+        evento.preventDefault();
+        const uf = this.resolverUF(feat);
+        if (uf) {
+          this.ufSelecionada = uf;
+          this.atualizarDestaqueEstados();
+          this.onEstadoClick?.(uf);
+        }
       });
 
     this.desenharLegenda(largura, alturaGeo, escalaCor);
   }
 
-  /** Resolve a sigla UF a partir da feature GeoJSON. */
+  private atualizarDestaqueEstados(): void {
+    this.mapaG.selectAll<SVGPathElement, GeoJSON.Feature>("path")
+      .attr("stroke-width", (feat) => {
+        const uf = this.resolverUF(feat);
+        return uf && uf === this.ufSelecionada ? 2.2 : 0.8;
+      })
+      .attr("class", (feat) => {
+        const uf = this.resolverUF(feat);
+        return uf && uf === this.ufSelecionada ? "estado-selecionado" : "";
+      });
+  }
+
   private resolverUF(feat: GeoJSON.Feature): string | undefined {
     const props = feat.properties ?? {};
-    // Tenta propriedades comuns de datasets públicos brasileiros
     const sigla: string =
       props["sigla"] ||
-      props["uf"]    ||
-      props["UF"]    ||
+      props["uf"] ||
+      props["UF"] ||
       MapaCoroplético.NOME_GEOJSON_PARA_UF[props["name"] || ""] ||
       MapaCoroplético.NOME_GEOJSON_PARA_UF[props["nome"] || ""] ||
       "";
     return sigla || undefined;
   }
 
-  /** Exibe o tooltip com nome, UF e score. */
   private mostrarTooltip(
     evento: PointerEvent,
     feat: GeoJSON.Feature,
     scoresPorUF: Map<string, ItemRanking>
   ): void {
-    const uf   = this.resolverUF(feat);
+    const uf = this.resolverUF(feat);
     const item = uf ? scoresPorUF.get(uf) : undefined;
     const nome = feat.properties?.name || feat.properties?.nome || uf || "—";
     const score = item ? item.score.toFixed(1) : "—";
-    const icone = item ? (item.score >= 70 ? "↑" : item.score >= 40 ? "~" : "↓") : "";
-    const corScore = item ? (item.score >= 70 ? "#22c55e" : item.score >= 40 ? "#f59e0b" : "#ef4444") : "#888";
+    const icone = item ? (item.score >= 53 ? "↑" : item.score >= 40 ? "~" : "↓") : "";
+    const corScore = item ? (item.score >= 53 ? "#22c55e" : item.score >= 40 ? "#f59e0b" : "#ef4444") : "#888";
 
     this.tooltip.innerHTML = `
       <strong>${nome}</strong> <span style="color:#888;font-size:0.8em">${uf ?? ""}</span><br/>
@@ -223,23 +290,23 @@ export class MapaCoroplético {
     `;
     this.tooltip.style.display = "block";
 
-    // Posiciona relativo ao container
     const rect = this.container.getBoundingClientRect();
+    const tooltipW = Math.min(200, rect.width * 0.9);
     let x = evento.clientX - rect.left + 12;
-    let y = evento.clientY - rect.top  - 12;
+    let y = evento.clientY - rect.top - 12;
 
-    // Evita que o tooltip saia pela direita
-    if (x + 180 > this.container.clientWidth) x -= 200;
+    if (x + tooltipW > rect.width) x = Math.max(8, x - tooltipW - 24);
+    if (y < 8) y = 8;
+    if (y + 80 > rect.height) y = Math.max(8, rect.height - 88);
 
     this.tooltip.style.left = `${x}px`;
-    this.tooltip.style.top  = `${y}px`;
+    this.tooltip.style.top = `${y}px`;
   }
 
   private esconderTooltip(): void {
     this.tooltip.style.display = "none";
   }
 
-  /** Desenha a barra de legenda de gradiente abaixo do mapa. */
   private desenharLegenda(
     largura: number,
     offsetY: number,
@@ -247,12 +314,12 @@ export class MapaCoroplético {
   ): void {
     this.legendaG.selectAll("*").remove();
 
-    const barraLargura = Math.min(240, largura * 0.4);
-    const barraAltura  = 12;
+    const barraLargura = Math.min(largura < 400 ? largura - 32 : 240, largura * 0.85);
+    const barraAltura = largura < 400 ? 10 : 12;
     const x0 = (largura - barraLargura) / 2;
-    const y0 = offsetY + 16;
+    const y0 = offsetY + (largura < 400 ? 10 : 16);
+    const fontSize = largura < 400 ? "9px" : "11px";
 
-    // Gradiente LinearGradient no defs
     const gradId = "mapa-gradiente-legenda";
     let defs = this.svg.select<SVGDefsElement>("defs");
     if (defs.empty()) defs = this.svg.append("defs");
@@ -269,38 +336,39 @@ export class MapaCoroplético {
         .attr("stop-color", escalaCor(v));
     });
 
-    // Barra de cor
     this.legendaG.append("rect")
       .attr("x", x0).attr("y", y0)
       .attr("width", barraLargura).attr("height", barraAltura)
       .attr("rx", 4)
       .attr("fill", `url(#${gradId})`);
 
-    // Rótulos
     const estiloTexto = (sel: d3.Selection<SVGTextElement, unknown, null, undefined>) =>
-      sel.style("font-size", "11px").style("fill", "#555");
+      sel.style("font-size", fontSize).style("fill", "#555");
 
     estiloTexto(
       this.legendaG.append("text")
-        .attr("x", x0).attr("y", y0 + barraAltura + 14)
+        .attr("x", x0).attr("y", y0 + barraAltura + (largura < 400 ? 12 : 14))
         .attr("text-anchor", "start")
-    ).text("Baixo score");
+    ).text("Baixo");
 
     estiloTexto(
       this.legendaG.append("text")
-        .attr("x", x0 + barraLargura / 2).attr("y", y0 + barraAltura + 14)
+        .attr("x", x0 + barraLargura / 2).attr("y", y0 + barraAltura + (largura < 400 ? 12 : 14))
         .attr("text-anchor", "middle")
-    ).text("Score de oportunidade");
+    ).text(largura < 400 ? "Score" : "Score de oportunidade");
 
     estiloTexto(
       this.legendaG.append("text")
-        .attr("x", x0 + barraLargura).attr("y", y0 + barraAltura + 14)
+        .attr("x", x0 + barraLargura).attr("y", y0 + barraAltura + (largura < 400 ? 12 : 14))
         .attr("text-anchor", "end")
-    ).text("Alto score");
+    ).text("Alto");
   }
 
-  /** Libera recursos — chame ao desmontar a página. */
   public destroy(): void {
+    if (this.resizeRaf !== null) {
+      cancelAnimationFrame(this.resizeRaf);
+      this.resizeRaf = null;
+    }
     this.resizeObserver.disconnect();
     this.tooltip.remove();
     this.svgEl.remove();
