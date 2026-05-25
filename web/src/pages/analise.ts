@@ -533,7 +533,15 @@ async function carregarTudo(dataInicio?: string, dataFim?: string, regiaoFiltro?
         mapaContainer.innerHTML = "";
         mapaCoroplético = new MapaCoroplético({ containerId: "mapa-coropletico-container" });
       }
-      await mapaCoroplético.render(dadosRankingMapa, regiaoFiltro);
+      await mapaCoroplético.render(dadosRankingMapa, regiaoFiltro, (uf) => {
+        const select = document.getElementById("estado-select-analises") as HTMLSelectElement | null;
+        if (!select) return;
+        const existe = Array.from(select.options).some(o => o.value === uf);
+        if (existe) {
+          select.value = uf;
+          select.dispatchEvent(new Event("change"));
+        }
+      });
     }
 
     await Promise.all([
