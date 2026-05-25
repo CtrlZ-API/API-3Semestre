@@ -449,6 +449,7 @@ button {
   flex: 1;
 }
 
+
 .insight-card.alta-oportunidade { background: #22c55e; border-color: #22c55e; }
 .insight-card.moderado         { background: #0077b6; border-color: #0077b6; }
 .insight-card.risco-alto        { background: #dc2626; border-color: #dc2626; }
@@ -916,3 +917,321 @@ button {
   transition: opacity 0.15s ease;
 }
 
+
+.relatorio-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  padding-bottom: 400px;
+}
+
+.relatorio-header {
+  margin-bottom: 1.5rem;
+}
+
+.relatorio-header h1 {
+  font-size: 1.8rem;
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  color: #333;
+}
+
+.relatorio-header p {
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.relatorio-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.relatorio-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.relatorio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  position: relative;
+  z-index: 1;
+}
+
+.relatorio-field label {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.relatorio-field select {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  background: white;
+  position: relative;
+  z-index: 1;
+}
+
+.relatorio-field select:focus {
+  outline: none;
+  border-color: #2B3EE6;
+}
+
+.relatorio-input {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  background: white;
+}
+
+.relatorio-input:focus {
+  outline: none;
+  border-color: #2B3EE6;
+}
+
+body:has(.relatorio-container) #app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+}
+
+.relatorio-container {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  padding-bottom: 400px;
+}
+
+.formato-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.formato-group label {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.formato-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.formato-btn {
+  padding: 0.5rem 1.25rem;
+  background: #f5f5f5;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.formato-btn.ativo {
+  background: #2B3EE6;
+  border-color: #2B3EE6;
+  color: white;
+}
+
+.formato-btn:not(.ativo):hover {
+  background: #e8e8e8;
+  border-color: #ccc;
+}
+
+.btn-exportar {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  color: white;
+  border: none;
+  padding: 0.875rem 2rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+  transition: opacity 0.2s;
+}
+
+.btn-exportar:hover {
+  opacity: 0.9;
+}
+
+.btn-exportar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.relatorio-feedback {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+  display: none;
+}
+
+.relatorio-feedback.sucesso {
+  display: block;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.relatorio-feedback.erro {
+  display: block;
+  background: #fee;
+  color: #c62828;
+}
+
+.relatorio-feedback.loading {
+  display: block;
+  background: #f0f0f0;
+  color: #333;
+}
+
+@media (max-width: 768px) {
+  .relatorio-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .formato-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.login-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-height: 100vh;
+  background: #2B3EE6;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2rem;
+  padding: 2rem 12rem;
+  z-index: 9999;
+}
+
+body:has(.login-container) nav {
+  display: none;
+}
+
+body:has(.login-container) #app {
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.login-logo {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-logo svg {
+  width: 200px;
+  height: auto;
+}
+
+.login-card {
+  flex: 0.8;
+  background: white;
+  border-radius: 24px;
+  padding: 2rem;
+  max-width: 420px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.login-card h2 {
+  font-size: 1.8rem;
+  color: #333;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.25rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.login-card input:focus {
+  outline: none;
+  border-color: #2B3EE6;
+}
+
+.login-card button {
+  width: 100%;
+  padding: 0.875rem;
+  background: #2B3EE6;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.login-card .cadastro-link {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+.login-card .cadastro-link a {
+  color: #2B3EE6;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.login-card .cadastro-link a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .login-container {
+    justify-content: center;
+    flex-direction: column;
+    padding: 2rem;
+    gap: 2rem;
+  }
+  
+  .login-logo svg {
+    width: 120px;
+  }
+  
+  .login-card {
+    max-width: 100%;
+    width: 100%;
+  }
+}
