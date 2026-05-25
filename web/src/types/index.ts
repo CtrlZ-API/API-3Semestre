@@ -37,3 +37,37 @@ export interface ItemRanking {
 export type TipoIndicador = "saldo" | "inadimplencia" | "variacao";
 
 export type Regiao = "Norte" | "Nordeste" | "Centro-Oeste" | "Sudeste" | "Sul";
+
+
+export interface UsuarioRegistro {
+  nome: string;
+  email: string;
+  senha: string;
+}
+
+export interface UsuarioLogin {
+  email: string;
+  senha: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  usuario: {
+    id: number;
+    nome: string;
+    email: string;
+    perfil: "analista" | "gestor";
+  };
+}
+
+
+export type FormatoRelatorio = "pdf" | "excel";
+
+export interface RelatorioParams {
+  formato: FormatoRelatorio;
+  estado?: string;  
+  mes?: number;    
+  ano?: number;
+}
