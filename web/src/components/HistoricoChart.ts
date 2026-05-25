@@ -19,7 +19,6 @@ const ptBr = d3.timeFormatLocale({
   shortMonths: ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 });
 
-const formatMonthYear = ptBr.format("%b %y");
 const formatFullDate = ptBr.format("%B de %Y");
 
 const multiFormat = (date: Date | d3.NumberValue) => {
@@ -258,13 +257,26 @@ export class HistoricoChart {
       
       const g = legend.append("g")
         .attr("transform", `translate(${offset}, 0)`)
+        .attr("class", active ? "chart-legend-item is-on" : "chart-legend-item is-off")
+        .attr("role", "button")
+        .attr("tabindex", 0)
+        .attr("aria-pressed", String(active))
         .style("cursor", "pointer")
         .on("click", () => {
           this.visibility[item.key as keyof typeof this.visibility] = !active;
           this.update();
         })
-        .on("mouseover", function() { d3.select(this).style("opacity", 0.7); })
-        .on("mouseout", function() { d3.select(this).style("opacity", 1); });
+        .on("keydown", (event: KeyboardEvent) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            this.visibility[item.key as keyof typeof this.visibility] = !active;
+            this.update();
+          }
+        })
+        .on("pointerenter", function() { d3.select(this).style("opacity", 0.75); })
+        .on("pointerleave", function() { d3.select(this).style("opacity", 1); })
+        .on("pointerdown", function() { d3.select(this).style("opacity", 0.55); })
+        .on("pointerup", function() { d3.select(this).style("opacity", 1); });
 
       g.append("circle").attr("r", 5).attr("fill", active ? item.color : "#ccc");
 

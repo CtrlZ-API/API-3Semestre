@@ -9,16 +9,16 @@ function renderHome(): string {
       <p>Painel de indicadores de crédito por estado</p>
     </header>
 
-    <div class="home-filtros">
+    <div class="home-filtros" role="search" aria-label="Filtros do painel">
       <label for="tipo-select"><strong>Indicador:</strong>
-        <select id="tipo-select">
+        <select id="tipo-select" aria-label="Tipo de indicador">
           <option value="saldo">Saldo</option>
           <option value="inadimplencia">Inadimplência</option>
           <option value="variacao">Crescimento da carteira</option>
         </select>
       </label>
       <label for="regiao-select"><strong>Região:</strong>
-        <select id="regiao-select">
+        <select id="regiao-select" aria-label="Filtrar por região">
           <option value="">Todas</option>
           <option value="Norte">Norte</option>
           <option value="Nordeste">Nordeste</option>
@@ -29,12 +29,12 @@ function renderHome(): string {
       </label>
       <div class="filtro-datas">
         <label for="data-inicio"><strong>De:</strong>
-          <input type="date" id="data-inicio" />
+          <input type="date" id="data-inicio" aria-label="Data inicial" />
         </label>
         <label for="data-fim"><strong>Até:</strong>
-          <input type="date" id="data-fim" />
+          <input type="date" id="data-fim" aria-label="Data final" />
         </label>
-        <button type="button" id="btn-limpar">Limpar</button>
+        <button type="button" id="btn-limpar" aria-label="Limpar filtros">Limpar</button>
       </div>
     </div>
 

@@ -1,4 +1,3 @@
-// rota certa 
 import { renderizarHome } from "./pages/home";
 import { renderizarAnalises } from "./pages/analise";
 import { renderizarLogin } from "./pages/login";
@@ -13,9 +12,27 @@ interface Rota {
   paramNames: string[];
 }
 
+const ROTAS_AUTH = ["/login", "/cadastro"];
+
 function isAutenticado(): boolean {
-  const token = localStorage.getItem("auth_token");
-  return !!token;
+  return !!localStorage.getItem("auth_token");
+}
+
+function aplicarLayoutPagina(caminho: string, exibeTelaLogin: boolean): void {
+  const app = document.getElementById("app");
+  if (!app) return;
+
+  const layoutAuth = ROTAS_AUTH.includes(caminho) || exibeTelaLogin;
+  document.body.classList.toggle("pagina-auth", layoutAuth);
+  app.classList.toggle("pagina-full", layoutAuth);
+}
+
+function atualizarNavAtiva(caminho: string): void {
+  const path = caminho === "/" ? "/" : caminho;
+  document.querySelectorAll<HTMLAnchorElement>(".nav-links a").forEach((link) => {
+    const href = link.getAttribute("href")?.replace(/^#/, "") || "/";
+    link.classList.toggle("active", href === path);
+  });
 }
 
 const rotas: Rota[] = [
@@ -72,21 +89,22 @@ const rotas: Rota[] = [
     handler: async (container, params) => {
       if (!isAutenticado()) {
         await renderizarLogin(container);
-      } else {
-        container.innerHTML = `
-          <a href="#/" style="display:inline-block; margin-bottom:1rem;">← Voltar</a>
-          <h1>Estado: ${params["uf"]}</h1>
-          <p style="color:#888;">Gráfico de série histórica — tarefa 3.3</p>
-        `;
+        return;
       }
+      container.innerHTML = `
+        <a href="#/" class="link-voltar">← Voltar</a>
+        <h1>Estado: ${params["uf"]}</h1>
+        <p class="texto-secundario">Gráfico de série histórica — tarefa 3.3</p>
+      `;
     },
   },
 ];
 
 async function rotear(): Promise<void> {
   const app = document.getElementById("app")!;
-
   const caminho = window.location.hash.replace(/^#/, "") || "/";
+
+  atualizarNavAtiva(caminho);
 
   for (const rota of rotas) {
     const match = caminho.match(rota.pattern);
@@ -101,19 +119,24 @@ async function rotear(): Promise<void> {
 
       try {
         await rota.handler(app, params);
+        aplicarLayoutPagina(caminho, app.querySelector(".login-container") !== null);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Erro inesperado";
         app.innerHTML = `<div class="error"><strong>Erro:</strong> ${msg}</div>`;
+        aplicarLayoutPagina(caminho, false);
       }
 
       return;
     }
   }
 
+  aplicarLayoutPagina(caminho, false);
   app.innerHTML = `
-    <h1>404</h1>
-    <p>Página não encontrada: <code>${caminho}</code></p>
-    <a href="#/">Voltar ao início</a>
+    <div class="pagina-erro">
+      <h1>404</h1>
+      <p>Página não encontrada: <code>${caminho}</code></p>
+      <a href="#/" class="btn-secundario">Voltar ao início</a>
+    </div>
   `;
 }
 
