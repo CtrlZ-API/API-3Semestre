@@ -721,11 +721,10 @@ button {
 
 .ranking-item-valor {
   flex: 0 0 auto;
-  min-width: 0;
-  max-width: 120px;
+  min-width: 140px;
   text-align: right;
   font-weight: bold;
-  word-break: break-word;
+  white-space: nowrap;
 }
 
 .ranking-toggle-wrap {

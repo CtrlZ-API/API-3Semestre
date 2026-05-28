@@ -51,7 +51,7 @@ function formatarScore(score: number): string {
 }
 
 async function getRankingOportunidade(): Promise<RankingOportunidade[]> {
-  const response = await fetch("/api/opurtunidade/ranking/v2");
+  const response = await fetch("/api/oportunidade/ranking/v2");
   if (!response.ok) throw new Error(`Erro ao buscar ranking: ${response.status}`);
   return response.json();
 }
