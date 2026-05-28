@@ -1,3 +1,7 @@
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 const REGIOES = [
   { valor: "", nome: "Todas as regiões" },
   { valor: "Norte", nome: "Norte" },
@@ -143,16 +147,6 @@ function mostrarFeedback(mensagem: string, tipo: "sucesso" | "erro" | "loading")
   }
 }
 
-function downloadBlob(blob: Blob, nomeArquivo: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nomeArquivo;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
 
 export async function renderizarRelatorio(container: HTMLElement): Promise<void> {
   const token = localStorage.getItem("auth_token");
@@ -209,12 +203,12 @@ export async function renderizarRelatorio(container: HTMLElement): Promise<void>
     }
 
     if (parseInt(anoInicio) > parseInt(anoFim)) {
-      mostrarFeedback("Ano início não pode ser maior que ano fim", "erro");
+      mostrarFeedback("Ano inicial não pode ser maior que o ano final", "erro");
       return;
     }
 
     if (parseInt(anoInicio) === parseInt(anoFim) && parseInt(mesInicio) > parseInt(mesFim)) {
-      mostrarFeedback("Mês início não pode ser maior que mês fim no mesmo ano", "erro");
+      mostrarFeedback("Mês inicial não pode ser maior que mês final no mesmo ano", "erro");
       return;
     }
 
@@ -244,11 +238,15 @@ export async function renderizarRelatorio(container: HTMLElement): Promise<void>
         throw new Error(errorText || `Erro ${response.status}`);
       }
 
-      const blob = await response.blob();
-      const extensao = formatoSelecionado === "pdf" ? "pdf" : "xlsx";
-      downloadBlob(blob, `relatorio_credito_${anoInicio}_${mesInicio}_a_${anoFim}_${mesFim}.${extensao}`);
-      mostrarFeedback("Relatório gerado com sucesso!", "sucesso");
+      const dados = await response.json();
 
+      if (formatoSelecionado === "excel") {
+        gerarExcel(dados);
+      } 
+      else {
+        gerarPDF(dados);
+      }
+mostrarFeedback("Relatório gerado com sucesso!", "sucesso");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro ao gerar relatório";
       mostrarFeedback(msg, "erro");
@@ -258,3 +256,70 @@ export async function renderizarRelatorio(container: HTMLElement): Promise<void>
     }
   });
 }
+function gerarExcel(dados: any): void {
+  const dadosExcel = (dados.por_estado || []).map((item: any) => ({
+    UF: item.uf,
+    Estado: item.estado,
+    Região: item.regiao,
+    Saldo: item.saldo,
+    Inadimplência: item.inadimplencia,
+    Variação: item.variacao,
+    Score: item.score_oportunidade
+}));
+
+  const worksheet = XLSX.utils.json_to_sheet(dadosExcel); // Ajusta as colunas automaticamente na ordem, começando UF até Score
+    worksheet["!cols"] = [
+    { wch: 6 },   
+    { wch: 20 },
+    { wch: 18 }, 
+    { wch: 15 },  
+    { wch: 18 },  
+    { wch: 15 },  
+    { wch: 12 }   
+];
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+  workbook,
+  worksheet,
+  "Relatório"
+  );
+
+  XLSX.writeFile(
+  workbook,
+  "relatorio_credito.xlsx"
+  );
+  }
+
+function gerarPDF(dados: any): void {
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.text("Relatório de Crédito", 14, 20);
+
+  const linhas = (dados.por_estado || []).map((item: any) => [
+  item.uf,
+  item.estado,
+  item.regiao,
+  item.saldo,
+  item.inadimplencia,
+  item.variacao,
+  item.score_oportunidade
+  ]);
+
+  autoTable(doc, {
+  startY: 30,
+  head: [[
+  "UF",
+  "Estado",
+  "Região",
+  "Saldo",
+  "Inadimplência",
+  "Variação",
+  "Score"
+  ]],
+  body: linhas
+  });
+
+  doc.save("relatorio_credito.pdf");
+  }
