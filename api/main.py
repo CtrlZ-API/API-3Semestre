@@ -674,7 +674,7 @@ def _calcular_ranking_v2_bruto(
     return resultado
 
 
-@app.get("/api/opurtunidade/ranking/v2")
+@app.get("/api/oportunidade/ranking/v2")
 def get_ranking_v2(
     top:    int           = Query(default=27, ge=1, le=27),
     regiao: Optional[str] = Query(default=None, description="Norte | Nordeste | Centro-Oeste | Sudeste | Sul"),
@@ -728,6 +728,7 @@ def _construir_filtros_relatorio(
     estado: Optional[str],
     ano: Optional[int],
     mes: Optional[int],
+    regiao: Optional[str],
 ) -> tuple[str, list]:
     """Monta cláusulas WHERE dinâmicas seguindo o padrão do projeto."""
     clausulas = ""
@@ -742,6 +743,9 @@ def _construir_filtros_relatorio(
     if mes:
         clausulas += " AND strftime('%m', data) = ?"
         params.append(f"{mes:02d}")
+    if regiao:
+        clausulas += " AND regiao = ?"
+        params.append(regiao)
 
     return clausulas, params
 
@@ -751,6 +755,8 @@ def get_relatorio(
     estado: Optional[str] = Query(default=None, description="Sigla do estado, ex: SP"),
     ano:    Optional[int] = Query(default=None, description="Ano de referência, ex: 2025"),
     mes:    Optional[int] = Query(default=None, ge=1, le=12, description="Mês de referência (1-12)"),
+    regiao: Optional[str] = Query(default=None),
+
 ):
     """
     Retorna dados consolidados para geração de relatório.
@@ -765,7 +771,7 @@ def get_relatorio(
         if agora - timestamp < _CACHE_TTL_RELATORIO:
             return dados_cache
 
-    filtros, params_base = _construir_filtros_relatorio(estado, ano, mes)
+    filtros, params_base = _construir_filtros_relatorio(estado, ano, mes, regiao)
 
     conn = get_connection()
     cursor = conn.cursor()
