@@ -5,14 +5,24 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.auth import router as auth_router, run_migrations, run_seed
+
 app = FastAPI(title="API Crédito Brasil")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# Executa migrações e seed ao iniciar a API
+# run_seed() cria o admin automaticamente se não existir
+run_migrations()
+run_seed()
+
+# Registra rotas de autenticação
+app.include_router(auth_router)
 
 def get_connection() -> sqlite3.Connection:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

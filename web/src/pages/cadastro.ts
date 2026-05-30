@@ -1,3 +1,5 @@
+import { registrar } from "../api/client";
+
 export async function renderizarCadastro(container: HTMLElement): Promise<void> {
   container.innerHTML = `
     <div class="login-container">
@@ -12,15 +14,20 @@ export async function renderizarCadastro(container: HTMLElement): Promise<void> 
 
       <div class="login-card">
         <h2>Cadastro</h2>
+        <div id="cadastro-erro"    class="form-erro"    hidden></div>
+        <div id="cadastro-sucesso" class="form-sucesso" hidden></div>
         <form id="cadastro-form" novalidate>
           <label for="nome">Nome completo
             <input type="text" id="nome" name="nome" autocomplete="name" required />
           </label>
-          <label for="usuario">Usuário
-            <input type="text" id="usuario" name="usuario" autocomplete="username" required />
-          </label>
-          <label for="email">Email
+          <label for="email">E-mail
             <input type="email" id="email" name="email" autocomplete="email" required />
+          </label>
+          <label for="perfil">Perfil
+            <select id="perfil" name="perfil" required>
+              <option value="analista">Analista</option>
+              <option value="gestor">Gestor</option>
+            </select>
           </label>
           <label for="senha">Senha
             <input type="password" id="senha" name="senha" autocomplete="new-password" required />
@@ -37,10 +44,53 @@ export async function renderizarCadastro(container: HTMLElement): Promise<void> 
     </div>
   `;
 
-  const form = document.getElementById("cadastro-form");
-  form?.addEventListener("submit", (e) => {
+  const form       = document.getElementById("cadastro-form")    as HTMLFormElement;
+  const erroEl     = document.getElementById("cadastro-erro")    as HTMLDivElement;
+  const sucessoEl  = document.getElementById("cadastro-sucesso") as HTMLDivElement;
+  const btnEl      = document.getElementById("btn-cadastrar")    as HTMLButtonElement;
+
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    localStorage.setItem("auth_token", "fake-token-para-teste");
-    window.location.hash = "/";
+    erroEl.hidden    = true;
+    sucessoEl.hidden = true;
+
+    const nome   = (document.getElementById("nome")            as HTMLInputElement).value.trim();
+    const email  = (document.getElementById("email")           as HTMLInputElement).value.trim();
+    const perfil = (document.getElementById("perfil")          as HTMLSelectElement).value as "analista" | "gestor";
+    const senha  = (document.getElementById("senha")           as HTMLInputElement).value;
+    const conf   = (document.getElementById("confirmar-senha") as HTMLInputElement).value;
+
+    if (!nome || !email || !senha || !conf) {
+      erroEl.textContent = "Preencha todos os campos.";
+      erroEl.hidden = false;
+      return;
+    }
+
+    if (senha !== conf) {
+      erroEl.textContent = "As senhas não coincidem.";
+      erroEl.hidden = false;
+      return;
+    }
+
+    if (senha.length < 6) {
+      erroEl.textContent = "A senha deve ter no mínimo 6 caracteres.";
+      erroEl.hidden = false;
+      return;
+    }
+
+    btnEl.disabled    = true;
+    btnEl.textContent = "Cadastrando...";
+
+    try {
+      await registrar(nome, email, senha, perfil);
+      sucessoEl.textContent = "Conta criada! Redirecionando para o login...";
+      sucessoEl.hidden = false;
+      setTimeout(() => { window.location.hash = "/login"; }, 1800);
+    } catch (err) {
+      erroEl.textContent = err instanceof Error ? err.message : "Erro ao cadastrar.";
+      erroEl.hidden = false;
+      btnEl.disabled    = false;
+      btnEl.textContent = "Cadastrar";
+    }
   });
 }

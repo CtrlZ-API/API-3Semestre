@@ -1,3 +1,5 @@
+import { login } from "../api/client";
+
 export async function renderizarLogin(container: HTMLElement): Promise<void> {
   container.innerHTML = `
     <div class="login-container">
@@ -12,9 +14,10 @@ export async function renderizarLogin(container: HTMLElement): Promise<void> {
 
       <div class="login-card">
         <h2>Login</h2>
+        <div id="login-erro" class="form-erro" hidden></div>
         <form id="login-form" novalidate>
-          <label for="usuario">Usuário
-            <input type="text" id="usuario" name="usuario" autocomplete="username" required />
+          <label for="email">E-mail
+            <input type="email" id="email" name="email" autocomplete="email" required />
           </label>
           <label for="senha">Senha
             <input type="password" id="senha" name="senha" autocomplete="current-password" required />
@@ -28,10 +31,36 @@ export async function renderizarLogin(container: HTMLElement): Promise<void> {
     </div>
   `;
 
-  const form = document.getElementById("login-form");
-  form?.addEventListener("submit", (e) => {
+  const form    = document.getElementById("login-form") as HTMLFormElement;
+  const erroEl  = document.getElementById("login-erro") as HTMLDivElement;
+  const btnEl   = document.getElementById("btn-login") as HTMLButtonElement;
+
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    localStorage.setItem("auth_token", "fake-token-para-teste");
-    window.location.hash = "/";
+    erroEl.hidden = true;
+
+    const email = (document.getElementById("email") as HTMLInputElement).value.trim();
+    const senha = (document.getElementById("senha") as HTMLInputElement).value;
+
+    if (!email || !senha) {
+      erroEl.textContent = "Preencha e-mail e senha.";
+      erroEl.hidden = false;
+      return;
+    }
+
+    btnEl.disabled = true;
+    btnEl.textContent = "Entrando...";
+
+    try {
+      const resposta = await login(email, senha);
+      localStorage.setItem("auth_token",   resposta.access_token);
+      localStorage.setItem("auth_usuario", JSON.stringify(resposta.usuario));
+      window.location.hash = "/";
+    } catch (err) {
+      erroEl.textContent = err instanceof Error ? err.message : "Erro ao fazer login.";
+      erroEl.hidden = false;
+      btnEl.disabled = false;
+      btnEl.textContent = "Entrar";
+    }
   });
 }

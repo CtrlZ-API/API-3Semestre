@@ -3,3 +3,6 @@ pandas
 fastapi
 aiofiles
 uvicorn
+python-jose[cryptography]
+python-multipart
+email-validator

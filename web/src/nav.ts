@@ -1,9 +1,11 @@
-/** Menu de navegação responsivo (hambúrguer em telas pequenas). */
+import { isAutenticado } from "./api/client";
+
+
 export function inicializarNav(): void {
-  const nav = document.getElementById("site-nav");
-  const toggle = document.getElementById("nav-toggle") as HTMLButtonElement | null;
+  const nav     = document.getElementById("site-nav");
+  const toggle  = document.getElementById("nav-toggle")  as HTMLButtonElement | null;
   const overlay = document.getElementById("nav-overlay") as HTMLButtonElement | null;
-  const menu = document.getElementById("nav-menu");
+  const menu    = document.getElementById("nav-menu");
 
   if (!nav || !toggle || !overlay || !menu) return;
 
@@ -24,32 +26,33 @@ export function inicializarNav(): void {
     toggle.setAttribute("aria-label", "Fechar menu de navegação");
     overlay.hidden = false;
     document.body.classList.add("nav-menu-open");
-    const primeiroLink = menu.querySelector<HTMLAnchorElement>("a");
-    primeiroLink?.focus();
+    menu.querySelector<HTMLAnchorElement>("a")?.focus();
   };
 
-  const alternar = (): void => {
-    if (nav.classList.contains("nav-open")) {
-      fechar();
-    } else {
-      abrir();
-    }
-  };
-
-  toggle.addEventListener("click", alternar);
-  overlay.addEventListener("click", fechar);
-
-  links.forEach((link) => {
-    link.addEventListener("click", fechar);
+  toggle.addEventListener("click", () => {
+    nav.classList.contains("nav-open") ? fechar() : abrir();
   });
 
+  overlay.addEventListener("click", fechar);
+  links.forEach((link) => link.addEventListener("click", fechar));
+
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && nav.classList.contains("nav-open")) {
-      fechar();
-    }
+    if (e.key === "Escape" && nav.classList.contains("nav-open")) fechar();
   });
 
   window.matchMedia("(min-width: 769px)").addEventListener("change", (e) => {
     if (e.matches) fechar();
   });
+
+  const syncNavVisibility = (): void => {
+    const esPaginaAuth = document.body.classList.contains("pagina-auth");
+    nav.style.display = esPaginaAuth ? "none" : "";
+  };
+
+  new MutationObserver(syncNavVisibility).observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+
+  syncNavVisibility();
 }
