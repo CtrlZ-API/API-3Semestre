@@ -736,44 +736,50 @@ _CACHE_TTL_RELATORIO = 300
 
 def _construir_filtros_relatorio(
     estado: Optional[str],
-    ano: Optional[int],
-    mes: Optional[int],
     regiao: Optional[str],
+    ano_inicio: Optional[int] = None,
+    mes_inicio: Optional[int] = None,
+    ano_fim: Optional[int] = None,
+    mes_fim: Optional[int] = None,
 ) -> tuple[str, list]:
-    """Monta cláusulas WHERE dinâmicas seguindo o padrão do projeto."""
+    """Monta cláusulas WHERE dinâmicas com suporte a intervalo de período."""
     clausulas = ""
     params: list = []
 
     if estado:
         clausulas += " AND estado = ?"
         params.append(estado.upper())
-    if ano:
-        clausulas += " AND strftime('%Y', data) = ?"
-        params.append(str(ano))
-    if mes:
-        clausulas += " AND strftime('%m', data) = ?"
-        params.append(f"{mes:02d}")
     if regiao:
         clausulas += " AND regiao = ?"
         params.append(regiao)
+
+    # Filtro de período: compara data (YYYY-MM) >= início e <= fim
+    if ano_inicio and mes_inicio:
+        clausulas += " AND strftime('%Y-%m', data) >= ?"
+        params.append(f"{ano_inicio:04d}-{mes_inicio:02d}")
+    if ano_fim and mes_fim:
+        clausulas += " AND strftime('%Y-%m', data) <= ?"
+        params.append(f"{ano_fim:04d}-{mes_fim:02d}")
 
     return clausulas, params
 
 
 @app.get("/api/relatorio")
 def get_relatorio(
-    estado: Optional[str] = Query(default=None, description="Sigla do estado, ex: SP"),
-    ano:    Optional[int] = Query(default=None, description="Ano de referência, ex: 2025"),
-    mes:    Optional[int] = Query(default=None, ge=1, le=12, description="Mês de referência (1-12)"),
-    regiao: Optional[str] = Query(default=None),
-
+    estado:     Optional[str] = Query(default=None, description="Sigla do estado, ex: SP"),
+    regiao:     Optional[str] = Query(default=None),
+    mes_inicio: Optional[int] = Query(default=None, ge=1, le=12, description="Mês inicial (1-12)"),
+    ano_inicio: Optional[int] = Query(default=None, description="Ano inicial, ex: 2023"),
+    mes_fim:    Optional[int] = Query(default=None, ge=1, le=12, description="Mês final (1-12)"),
+    ano_fim:    Optional[int] = Query(default=None, description="Ano final, ex: 2024"),
+    indicadores: Optional[str] = Query(default=None, description="Indicadores separados por vírgula"),
 ):
     """
     Retorna dados consolidados para geração de relatório.
-    Inclui resumo nacional, breakdown por estado (com score e per capita)
-    e série temporal mensal — tudo filtrado opcionalmente por estado, ano e mês.
+    Inclui resumo nacional, breakdown por estado (com score)
+    e série temporal mensal — filtrado por intervalo de período, estado e região.
     """
-    chave_cache = (estado, ano, mes)
+    chave_cache = (estado, regiao, mes_inicio, ano_inicio, mes_fim, ano_fim)
     agora = time.time()
 
     if chave_cache in _cache_relatorio:
@@ -781,7 +787,14 @@ def get_relatorio(
         if agora - timestamp < _CACHE_TTL_RELATORIO:
             return dados_cache
 
-    filtros, params_base = _construir_filtros_relatorio(estado, ano, mes, regiao)
+    filtros, params_base = _construir_filtros_relatorio(
+        estado=estado,
+        regiao=regiao,
+        ano_inicio=ano_inicio,
+        mes_inicio=mes_inicio,
+        ano_fim=ano_fim,
+        mes_fim=mes_fim,
+    )
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -822,17 +835,18 @@ def get_relatorio(
         cursor.execute(query_estados, params_base)
         rows_estados = [dict(r) for r in cursor.fetchall()]
 
-        # ── Query 3: Série temporal ──
+        # ── Query 3: Série temporal por estado ──
         query_serie = f"""
             SELECT
+                estado,
                 data,
                 ROUND(SUM(CASE WHEN tipo = 'saldo' THEN valor ELSE 0 END), 2)            AS saldo_nacional,
                 ROUND(AVG(CASE WHEN tipo = 'inadimplencia' THEN valor ELSE NULL END), 2) AS inadimplencia_media,
                 ROUND(SUM(CASE WHEN tipo = 'variacao' THEN valor ELSE 0 END), 2)         AS variacao_nacional
             FROM dados_credito
             WHERE 1=1 {filtros}
-            GROUP BY data
-            ORDER BY data ASC
+            GROUP BY estado, data
+            ORDER BY estado ASC, data ASC
         """
         cursor.execute(query_serie, params_base)
         rows_serie = [dict(r) for r in cursor.fetchall()]
@@ -894,9 +908,12 @@ def get_relatorio(
     # ── Montar resposta final ──
     resultado = {
         "filtros_aplicados": {
-            "estado": estado.upper() if estado else None,
-            "ano":    ano,
-            "mes":    mes,
+            "estado":     estado.upper() if estado else None,
+            "regiao":     regiao,
+            "mes_inicio": mes_inicio,
+            "ano_inicio": ano_inicio,
+            "mes_fim":    mes_fim,
+            "ano_fim":    ano_fim,
         },
         "periodo_dados": {
             "data_inicio": data_inicio_fmt,

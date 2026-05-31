@@ -789,8 +789,23 @@ button {
     gap: 12px;
   }
 
+  .nav-usuario-nome {
+    display: none;
+  }
+
+  .nav-logo  { order: 1; }
+  .nav-links { order: 2; }
+
+  #nav-usuario {
+    order: 3;
+    margin-left: auto;
+    padding-right: 0;
+  }
+
   .nav-toggle {
     display: flex;
+    order: 4;
+    margin-left: 0;
   }
 
   .nav-overlay[hidden] {
@@ -1442,6 +1457,20 @@ body.pagina-auth .site-nav {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
+.relatorio-card fieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  min-width: 0;
+}
+
+.relatorio-card legend {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #444;
+  padding: 0;
+}
+
 .relatorio-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1885,4 +1914,119 @@ a.btn-secundario {
   background: #ef4444;
   border-color: #ef4444;
   color: #fff;
+}
+/* ─── Relatório: indicadores, btn-link (adicionados na integração dos relatórios avançados) ─── */
+
+.indicadores-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  align-items: start;
+  justify-items: start;
+  margin-top: 0.25rem;
+}
+
+.indicador-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  background: #fafafa;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.indicador-check input {
+  margin-top: 0.2rem;
+  flex: 0 0 auto;
+}
+
+.indicador-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  text-align: left;
+}
+
+.indicador-label strong {
+  font-size: 0.95rem;
+  color: #222;
+}
+
+.indicador-label small {
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.35;
+}
+
+.indicadores-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.btn-link {
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+#btn-marcar-todos {
+  background: #2B3EE6;
+  color: #fff;
+  border: 1px solid #2B3EE6;
+  box-shadow: 0 2px 8px rgba(43, 62, 230, 0.18);
+}
+
+#btn-marcar-todos:hover {
+  background: #2434c4;
+  border-color: #2434c4;
+}
+
+#btn-marcar-todos:active {
+  transform: translateY(1px);
+}
+
+#btn-marcar-todos:focus-visible {
+  outline: 2px solid #2B3EE6;
+  outline-offset: 2px;
+}
+
+#btn-desmarcar-todos {
+  background: #fff;
+  color: #555;
+  border: 1px solid #d1d5db;
+}
+
+#btn-desmarcar-todos:hover {
+  background: #f8f9fb;
+  border-color: #bfc5d2;
+  color: #222;
+}
+
+#btn-desmarcar-todos:active {
+  transform: translateY(1px);
+}
+
+#btn-desmarcar-todos:focus-visible {
+  outline: 2px solid #2B3EE6;
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .indicadores-grid {
+    grid-template-columns: 1fr;
+  }
 }
